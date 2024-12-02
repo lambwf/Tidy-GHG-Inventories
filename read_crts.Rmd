@@ -1,0 +1,250 @@
+---
+title: "read_crts"
+output: html_document
+date: "`r Sys.Date()`"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(zoo)
+
+
+
+```
+
+
+```{r get_files}
+
+files_countries <- data.frame(dir=list.files(path = "sources/CRTs/"))
+files_countries <- files_countries %>% 
+  mutate(country = str_extract(dir, "^.{3}")) %>% 
+  mutate(year_submission = str_extract(dir, "\\d{4}"))
+files_crts = data.frame(country=NA,year_submission=NA,dir=NA,files=NA,file_year=NA)
+
+for (i in 2:length(files_countries$dir)) {
+  
+  files <- data.frame(files=list.files(path = paste0("sources/CRTs/",files_countries$dir[i])))
+  files <- files %>% 
+    mutate(all_years = map(files, ~ str_extract_all(.x, "\\b\\d{4}\\b")[[1]])) %>% 
+    mutate(file_year = map_chr(all_years, ~ .x[2])) %>% 
+    select(-all_years) %>% 
+    filter(!is.na(file_year)) %>% 
+    mutate(dir=files_countries$dir[i]) %>% 
+    mutate(country=files_countries$country[i]) %>% 
+    mutate(year_submission=files_countries$year_submission[i])
+    
+  files_crts <- rbind(files_crts,files)
+  
+  rm(files)
+}
+
+rm(files_countries)
+files_crts <- files_crts %>% filter(!is.na(country))
+```
+
+
+```{r get_summary_reports}
+
+# Table10s1, Table10s2, Table10s3, Table10s4, Table10s5, Table10s6
+# Don't know GWP
+
+data_crts <- data.frame(country=NA,year_submission=NA,gwp=NA,gas=NA,year=NA,category=NA,value=NA)
+
+## for the summary sheets we only need the file for the latest year
+
+data_files = files_crts %>% filter(file_year==2022)  ### potentially make this dynamic for future updates
+
+
+for (i in 1:length(data_files)) {
+  
+  table_1 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s1"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    mutate(units = "ktCO2e") %>% 
+    mutate(table = "ghg")
+    
+  
+  table_2 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s2"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    mutate(units = "ktCO2") %>% 
+    mutate(table = "co2")
+  
+  
+  table_3 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s3"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    mutate(units = "ktCH4e") %>% 
+    mutate(table = "ch4")
+  
+  
+  table_4 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s4"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    mutate(units = "ktN2O") %>% 
+    mutate(table = "n2o")
+  
+  
+  table_5 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s5"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    mutate(units = "ktCO2e") %>% 
+    mutate(table = "fgases")
+  
+  
+  table_6 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s6"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.EMISSIONS.AND.REMOVALS",`1990`:`2022`) %>% 
+    mutate(units = "ktCO2e") %>% 
+    mutate(table = "totals")
+  
+  
+  table <- bind_rows(table_2,table_3,table_4,table_5)
+  
+}
+
+
+
+```
+
+
+```{r get_activity_data_energy}
+
+
+data_crts_activity <- data.frame()
+
+
+for (i in 1:length(files_crts$country)) {
+  
+    table_1 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",files_crts$dir[i],"/",files_crts$files[i]),
+                       sheet = paste0("Table1.A(a)s1"),
+                       startRow = 7)
+    
+    table_2 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",files_crts$dir[i],"/",files_crts$files[i]),
+                       sheet = paste0("Table1.A(a)s2"),
+                       startRow = 7)
+    
+    table_3 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",files_crts$dir[i],"/",files_crts$files[i]),
+                       sheet = paste0("Table1.A(a)s3"),
+                       startRow = 7) %>% mutate(blarg=NA)
+    
+    table_4 <- read.xlsx(xlsxFile = paste0("sources/CRTs/",files_crts$dir[i],"/",files_crts$files[i]),
+                       sheet = paste0("Table1.A(a)s4"),
+                       startRow = 7)
+    
+    
+    names(table_1) <- c("category","activity","X3","ef_co2","ef_ch4","ef_n2o","e_co2","e_ch4","e_n2o","captured_co2")
+    names(table_2) <- c("category","activity","X3","ef_co2","ef_ch4","ef_n2o","e_co2","e_ch4","e_n2o","captured_co2")
+    names(table_3) <- c("category","activity","X3","ef_co2","ef_ch4","ef_n2o","e_co2","e_ch4","e_n2o","captured_co2")
+    names(table_4) <- c("category","activity","X3","ef_co2","ef_ch4","ef_n2o","e_co2","e_ch4","e_n2o","captured_co2")
+    
+    
+    table_1 <- table_1 %>% 
+      select(-X3) %>% 
+      mutate(activity_unit="consumption (TJ)") %>% 
+      select(category,activity_unit,everything()) %>% 
+      filter(!is.na(category)) %>% 
+      filter(!grepl("Note:",category))
+    
+    table_2 <- table_2 %>% 
+      select(-X3) %>% 
+      mutate(activity_unit="consumption (TJ)") %>% 
+      select(category,activity_unit,everything()) %>% 
+      filter(!is.na(category)) %>% 
+      filter(!grepl("Note:",category))
+    
+    table_3 <- table_3 %>% 
+      select(-X3) %>% 
+      mutate(activity_unit="consumption (TJ)") %>% 
+      select(category,activity_unit,everything()) %>% 
+      filter(!is.na(category)) %>% 
+      filter(!grepl("Note:",category))
+    
+    table_4 <- table_4 %>% 
+      select(-X3) %>% 
+      mutate(activity_unit="consumption (TJ)") %>% 
+      select(category,activity_unit,everything()) %>% 
+      filter(!is.na(category)) %>% 
+      filter(!grepl("Note:",category)) %>% 
+      mutate(remove=ifelse(grepl("Information item",category),"yes",NA))
+    
+    ## remove footnotes
+    table_4$remove <- na.locf(table_4$remove,na.rm=FALSE)
+    table_4 <- table_4 %>% 
+      filter(is.na(remove)) %>% 
+      select(-remove)
+    
+    ## join tables
+    table <- bind_rows(table_1,table_2,table_3,table_4)
+    
+    ## propagate categories
+    table <- table %>% 
+      mutate(subcategory=category) %>% 
+      mutate(category=ifelse(grepl("1.A.",subcategory),subcategory,NA))
+    table$category <- na.locf(table$category)
+    
+    ## extract category codes
+    table <- table %>% 
+      mutate(category_code=sub("^(\\S+)\\s.*", "\\1", category)) %>% 
+      mutate(category=sub("^\\S+\\s(.*)", "\\1", category))
+    
+    ## remove spaces at the beginning of categories
+    table$category <- gsub("^\\s+", "", table$category)
+    table <- table %>% select(category_code,category,subcategory,everything()) ##########!
+    
+    ## rename totals
+    table <- table %>% 
+      mutate(subcategory=ifelse(grepl(category_code,subcategory),"Total",subcategory))
+    
+    ## replace "NO"s with zeros (also what does IE mean?)
+    
+    
+    
+    ######### extract the emissions hierarchy (this splits it into columns)
+    # text_split <- table %>%
+    #   separate(category_code, into = paste0("category_level_", 1:8), sep = "\\.", remove = FALSE)
+    # 
+    # text_split <- gather(text_split %>% select_if(grepl("category_", names(.))),category,code,-category_code)
+    # text_split <- text_split %>% 
+    #   distinct() %>% 
+    #   arrange(category_code) %>% 
+    #   mutate(code=ifelse(code=="",NA,code))
+    # text_split <- spread(text_split,category,code)
+    # #text_split <- text_split %>% select(where(~!all(is.na(.x))))   # removes columns without codes
+    
+    
+    ## extract the emissions hierarchy (just the level associated with each category)
+    table <- table %>%
+      mutate(category_level = map_int(category_code, ~ sum(str_split(.x, "\\.")[[1]] != "")))
+      #mutate(category_level = str_count(category_code, "\\."))
+      
+    
+    ## join country and year
+    table <- table %>% 
+      mutate(iso=files_crts$country[i]) %>% 
+      mutate(year=files_crts$file_year[i])
+    
+    ## organise
+    table <- table %>% 
+      select(iso,category_code,category_level,category,subcategory,year,everything()) 
+    
+    
+    data_crts_activity <- bind_rows(data_crts_activity,table)
+    
+}
+
+```
+
