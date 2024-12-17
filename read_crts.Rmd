@@ -290,11 +290,15 @@ data_crts$gas <- factor(data_crts$gas,levels=c("co2","ch4","n2o","hfcs","pfcs","
 data_crts <- data_crts %>% arrange(across(-ncol(data_crts)))
 
 
+## add country names
+data_crts <- data_crts %>% 
+  mutate(country=countrycode(iso,"iso3c","country.name"))
+
+
 ## tidy up file
 data_crts <- data_crts %>% 
   filter(!is.na(sector_lv1)) %>% 
-  mutate(source="UNFCCC CRT 2024") %>% 
-  select(source,iso,sector_code,sector_level,sector_lv1,sector_lv2,sector_lv3,gas,units,year,value)
+  select(iso,country,sector_code,sector_level,sector_lv1,sector_lv2,sector_lv3,gas,units,year,value)
 
 
 ```
@@ -305,22 +309,47 @@ data_crts <- data_crts %>%
 save(data_crts,file="data/data_crts.RData")
 
 wb <- createWorkbook()
-options("openxlsx.numFmt" = "0.00")
 addWorksheet(wb,"info")
 addWorksheet(wb,"data")
+addWorksheet(wb,"sectors")
+addWorksheet(wb,"countries")
 
-info = data.frame(a=c("Author","Contact","Description","Last update","Link to code"),b=c("William F. Lamb","lamb@mcc-berlin.net","This data file is a compilation of Annex I greenhouse gas emissions inventories, based on the CRT (Common Reporting Table) format. I sourced the original CRT files from the UNFCCC (e.g. https://unfccc.int/ghg-inventories-annex-i-parties/2024) and reformatted their summary reports into a single structured data table. Importantly, I extracted only the 'leaf nodes' in the emissions hierarchy, meaning that all rows for a given country can be safely summed without double counting emissions. Different emissions sectors can also be aggregated using the 'sector_lv1/2/3' columns.",paste0(Sys.Date()),"https://github.com/lambwf/National-GHG-Inventory-Tracking/blob/main/read_crts.Rmd"))
+info = data.frame(a=c("Title","Author","Contact","General description","Sector description","Global warming potentials","Country coverage","Last update","Link to code"),b=c("Tidy GHG Inventories v0.1","William F. Lamb","lamb@mcc-berlin.net","This data file is a compilation of national greenhouse gas emissions (GHG) inventories, based on the CRT (Common Reporting Table) format that countries submit to the UNFCCC. The objective is to put the national inventories into a tidy, consistent format that better suits user needs. I sourced the original CRT files from the UNFCCC (e.g. https://unfccc.int/ghg-inventories-annex-i-parties/2024) and reformatted their summary reports into a single structured data table.","The CRTs provide emissions data at different levels of a sector hierarchy (e.g. for sector 1 Energy, but also its subcomponents such as 1A, 1B, etc.). This means you need to be careful not to double count emissions when summing up sectors. I have therefore extracted only the 'leaf nodes' in the emissions hierarchy, meaning all sectors that have no further child sectors. These can be safely summed to different levels of aggregation without double counting. The 'sectors' tab shows which nodes these are and where they fit into the inventory sector scheme.","Emissions from different gases are aggregated using global warming potentials (GWPs) with a 100 year time horizon (GWP100) from the IPCC 5th Assessment Report. More recent GWP100 values have been published in the IPCC AR6, but I have not yet figured out if it is possible to extract F-gases from every CRT in original units, which would be necessary to update the values.","So far I have only compiled the CRTs that are available for Annex I countries. The 'countries' sheet describes which are covered.",paste0(Sys.Date()),"https://github.com/lambwf/Tidy-GHG-Inventories/blob/main/read_crts.Rmd"))
 
-writeData(wb, sheet = "info", info, colNames = F, rowNames = F)
-writeData(wb, sheet = "data", data_crts, colNames = T, rowNames = F)
-
-saveWorkbook(wb,paste0("data/National-GHG-Inventory-Summaries.xlsx"),overwrite=T)
 
 
 sector_summary <- table %>% select(sector_code,sector_description,sector_level) %>% distinct()
 sector_summary <- left_join(sector_summary,sectors)
 sector_summary <- sector_summary %>% 
-  mutate(sector_description=ifelse(sector_level==2,paste0("  ",sector_description),sector_description)) %>% 
-  mutate(sector_description=ifelse(sector_level==3,paste0("    ",sector_description),sector_description))
+  mutate(sector_description=ifelse(sector_level==2,paste0("   ",sector_description),sector_description)) %>% 
+  mutate(sector_description=ifelse(sector_level==3,paste0("      ",sector_description),sector_description)) %>% 
+  mutate(`included data tab?`=ifelse(is.na(sector_lv1),"excluded","included"))
+
+country_summary <- data_files %>%
+  rename(iso=country) %>% 
+  mutate(country=countrycode(iso,"iso3c","country.name")) %>% 
+  select(iso,country,file=files,year_submission)
+
+
+writeData(wb, sheet = "info", info, colNames = F, rowNames = F)
+writeData(wb, sheet = "data", data_crts, colNames = T, rowNames = F)
+writeData(wb, sheet = "sectors", sector_summary, colNames = T, rowNames = F)
+writeData(wb, sheet = "countries", country_summary, colNames = T, rowNames = F)
+
+textStyle <- createStyle(fontSize = 11, wrapText = TRUE, valign = "top", halign = "left")
+addStyle(wb, "info", textStyle, rows = 1:nrow(info), cols = 1:2, gridExpand = TRUE)
+addStyle(wb, "data",createStyle(numFmt= "0"),rows=1:nrow(data_crts),cols=which(names(data_crts)=="year"))
+
+setColWidths(wb, "info", cols = 1, widths = 20)
+setColWidths(wb, "info", cols = 2, widths = 200)
+setColWidths(wb, "data", cols = 1:ncol(data_crts), widths = "auto")
+setColWidths(wb, "data", cols=which(names(data_crts)=="iso"), widths = 5)
+setColWidths(wb, "data", cols=which(names(data_crts)=="year"), widths = 8)
+setColWidths(wb, "sectors", cols = 1:ncol(sector_summary), widths = "auto")
+setColWidths(wb, "countries", cols = 1:ncol(country_summary), widths = "auto")
+setColWidths(wb, "countries", cols=which(names(country_summary)=="iso"), widths = 5)
+
+saveWorkbook(wb,paste0("data/Tidy-GHG-Inventories-v0.1.xlsx"),overwrite=T)
+
 
 ```
