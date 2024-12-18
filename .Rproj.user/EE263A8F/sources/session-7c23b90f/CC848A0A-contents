@@ -1,0 +1,97 @@
+---
+title: "check_crts"
+author: "William F. Lamb"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(zoo)
+
+load("data/data_crts.RData")
+
+```
+
+```{r get_files}
+
+files_countries <- data.frame(dir=list.files(path = "sources/CRTs/"))
+files_countries <- files_countries %>% 
+  mutate(country = str_extract(dir, "^.{3}")) %>% 
+  mutate(year_submission = str_extract(dir, "\\d{4}"))
+files_crts = data.frame(country=NA,year_submission=NA,dir=NA,files=NA,file_year=NA)
+
+for (i in 2:length(files_countries$dir)) {
+  
+  files <- data.frame(files=list.files(path = paste0("sources/CRTs/",files_countries$dir[i])))
+  files <- files %>% 
+    mutate(all_years = map(files, ~ str_extract_all(.x, "\\b\\d{4}\\b")[[1]])) %>% 
+    mutate(file_year = map_chr(all_years, ~ .x[2])) %>% 
+    select(-all_years) %>% 
+    filter(!is.na(file_year)) %>% 
+    mutate(dir=files_countries$dir[i]) %>% 
+    mutate(country=files_countries$country[i]) %>% 
+    mutate(year_submission=files_countries$year_submission[i])
+  
+  files_crts <- rbind(files_crts,files)
+  
+  rm(files)
+}
+
+rm(files_countries)
+files_crts <- files_crts %>% filter(!is.na(country))
+
+data_files = files_crts %>% filter(file_year==max(files_crts$file_year))
+```
+
+
+```{r compare_totals}
+
+## get the total GHG emissions from each CRT
+
+data_crts_totals <- data.frame()
+
+for (i in 1:length(data_files$country)) {
+  
+  totals <- read.xlsx(xlsxFile = paste0("sources/CRTs/",data_files$dir[i],"/",data_files$files[i]),
+                       sheet = paste0("Table10s1"),
+                       startRow = 8) %>%
+    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    mutate(units = "ktCO2e") %>% 
+    mutate(gas = "ghg")
+  
+  
+  totals <- totals %>% 
+    filter(grepl("Total",GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES)) %>% 
+    filter(grepl("net emissions",GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES)) %>% 
+    gather(.,year,total,`1990`:`2022`) %>% 
+    mutate(iso=data_files$country[i]) %>%
+    mutate(year=as.numeric(year)) %>% 
+    mutate(total=as.numeric(total)) %>% 
+    select(iso,year,total)
+  
+  data_crts_totals <- bind_rows(data_crts_totals,totals)
+    
+  
+}
+  
+
+# do my leaf node emissions sum up to totals in the CRT summaries?
+
+check <- data_crts %>% 
+  group_by(iso,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE))
+
+check <- left_join(check,data_crts_totals,by=join_by(iso,year))
+
+check <- check %>% 
+  mutate(difference_abs=value-total) %>% 
+  mutate(difference_rel=(difference/value)*100) %>% 
+  mutate(warning=ifelse(abs(difference_rel)>0.01,">0.1% diff",NA))
+
+```

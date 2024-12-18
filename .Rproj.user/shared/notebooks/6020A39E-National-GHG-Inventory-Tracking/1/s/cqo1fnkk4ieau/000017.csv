@@ -1,0 +1,5 @@
+"0","data <- data_crts %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6)
+"
+"2","`summarise()` has grouped output by 'iso', 'country'. You can override using the `.groups` argument."
