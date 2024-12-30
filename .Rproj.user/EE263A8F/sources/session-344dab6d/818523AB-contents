@@ -1,0 +1,56 @@
+---
+title: "National-GHG-Inventory-Tracking"
+author: "William F. Lamb"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(zoo)
+
+load('data/data_crts.RData')
+
+source("https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R")
+
+
+```
+
+
+
+```{r plots, echo=FALSE, fig.height=10}
+
+# data <- data_crts %>% 
+#   group_by(iso,country,year) %>% 
+#   summarise(value=sum(value,na.rm=T)/1e6)
+
+
+data <- data_crts %>% 
+  group_by(country,year,sector_lv1,gas) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6)
+
+
+
+data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_lv1)) +
+  facet_wrap(.~country,scales="free_y") +
+  geom_col() +
+  theme_wl()
+
+
+
+
+data <- data_crts %>% 
+  group_by(country,year) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6) %>% filter(year==2022)
+
+
+
+
+```
