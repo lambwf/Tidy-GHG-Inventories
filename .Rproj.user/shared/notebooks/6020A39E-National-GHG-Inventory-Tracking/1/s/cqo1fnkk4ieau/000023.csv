@@ -1,5 +1,0 @@
-"0","data <- data_crts %>% 
-  group_by(country,year) %>% 
-  summarise(value=sum(value,na.rm=T)/1e6) %>% filter(year==2022)
-"
-"2","`summarise()` has grouped output by 'country'. You can override using the `.groups` argument."

@@ -33,15 +33,16 @@ for (i in 1:length(files_crts$country)) {
   totals <- read.xlsx(xlsxFile = paste0("sources/CRTs/",files_crts$dir[i],"/",files_crts$files[i]),
                        sheet = paste0("Table10s1"),
                        startRow = 8) %>%
-    select("GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",`1990`:`2022`) %>% 
+    select(var="GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",matches("^\\d{4}")) %>% 
+    rename_with(~ substr(., 1, 4), matches("^\\d{4}")) %>% 
     mutate(units = "ktCO2e") %>% 
     mutate(gas = "ghg")
   
   
   totals <- totals %>% 
-    filter(grepl("Total",GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES)) %>% 
-    filter(grepl("net emissions",GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES)) %>% 
-    gather(.,year,total,`1990`:`2022`) %>% 
+    filter(grepl("Total",var)) %>% 
+    filter(grepl("net emissions",var)) %>% 
+    gather(.,year,total,-var,-units,-gas) %>% 
     mutate(iso=files_crts$iso[i]) %>%
     mutate(year=as.numeric(year)) %>% 
     mutate(total=as.numeric(total)*1000) %>% 
@@ -66,6 +67,13 @@ check <- check %>%
   mutate(difference_rel=(difference_abs/value)*100) %>% 
   filter(abs(difference_rel)>0.01)
   
+# check_gha <- data_crts %>% 
+#   filter(iso=="GHA") %>% 
+#   filter(year==2022) %>% 
+#   group_by(iso,year,sector_lv1) %>% 
+#   summarise(value=sum(value,na.rm=T))
+
+
 
 ```
 
