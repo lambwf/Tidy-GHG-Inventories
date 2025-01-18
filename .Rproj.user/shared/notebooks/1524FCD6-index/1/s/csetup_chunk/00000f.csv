@@ -1,0 +1,6 @@
+"0",""
+"0","rm(list = ls())"
+"0","library(flexdashboard)"
+"0","library(tidyverse)"
+"0","library(knitr)"
+"0",""
