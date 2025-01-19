@@ -75,7 +75,7 @@ body {
   margin: 0 auto 10px;
 }
 
-.figure-links {
+.figure-text {
   font-size: 12px;
 }
 
@@ -96,12 +96,12 @@ body {
   box-sizing: border-box;
   background-color: white;
   text-align: left;
-  font-size: 16px;
+  font-size: 14px;
   grid-column: span 2;
 }
 
 .text-container h1 {
-  font-size: 18px;
+  font-size: 16px;
   margin-top: 0px;
 }
 
@@ -122,6 +122,11 @@ body {
   }
 }
 
+.copyright {
+  font-size: 12px;
+  text-align: center;
+}
+
 
 ```
 
@@ -130,13 +135,26 @@ body {
 
 <div class="banner">
 <div class="title">Tidy GHG Inventories</div>
-<div class="link"><a href="https://github.com/lambwf/lambwf.github.io" target="_blank">William F. Lamb</a> | 
+<div class="link"><a href="https://lambwf.github.io/" target="_blank">William F. Lamb</a> | 
 <a href="https://github.com/lambwf/Tidy-GHG-Inventories/" target="_blank">Source Code</a>
 </div>
 </div>
 <div class='grid'>
 
-<div class="text-container">These are figures using the latest national greenhouse gas inventory data submitted by countries to the UNFCCC.</div>
+<div class="text-container">
+<p>
+The Tidy GHG Inventories dataset is a compilation of national greenhouse gas emissions (GHG) inventories, sourced from the Common Reporting Tables (CRTs) that countries submit to the UNFCCC. The CRTs themselves require significant manipulation before one can begin any data analysis. The objective of this dataset is therefore to put the national inventories into a single, tidy and consistently structured table format that better suits user needs.
+</p>
+<p>
+<a target='_blank' href='https://zenodo.org/records/14637347'>The data repository and documentation is available here.</a>
+</p>
+<p>
+The following figures summarise the available data for nine inventory sectors. Many more sectors are available in the dataset, as well as memo items that are usually not counted in national totals.
+</p>
+<p>
+Please cite the figures or data as follows: Lamb, W. F. (2025). Tidy GHG Inventories (0.3) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14637347
+</p>
+</div>
 
 
 ```
@@ -157,7 +175,7 @@ for (file in filenames) {
   
   cat("<div class='figure-container'>")
   cat(paste0("<img src='", file, "' alt='", country, "' />"))
-  cat(paste0("<div class='figure-links'>", link_data, " | ", link_png, " | ", link_pdf, "</div>"))
+  cat(paste0("<div class='figure-text'>", link_data, " | ", link_png, " | ", link_pdf, "</div>"))
   cat("</div>")
   
 }
@@ -166,3 +184,9 @@ for (file in filenames) {
 ```
 
 </div>
+
+``` {r, results='asis'}
+
+cat(paste0("<br><footer><p class='copyright'>© ",format(Sys.Date(), "%Y")," William F. Lamb</p></footer>"))
+
+```

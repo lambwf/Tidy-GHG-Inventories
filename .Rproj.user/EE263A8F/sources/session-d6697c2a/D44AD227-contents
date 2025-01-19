@@ -1,0 +1,194 @@
+---
+title: "William F. Lamb"
+output: 
+  html_document:
+    self_contained: true
+---
+
+```{r setup, include=FALSE}
+
+library(knitr)
+library(tidyverse)
+library(openxlsx)
+knitr::opts_chunk$set(echo=FALSE)
+
+```
+
+``` {css}
+
+h1.title {
+  display: none;
+}
+
+.banner {
+  width: 100%;
+  height: 50px;
+  background-color: #008cba;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.title {
+  font-size: 18px;
+}
+
+.banner a {
+  color: #f5f5f5;
+  text-decoration: none;
+}
+
+.banner a:hover {
+  text-decoration: underline;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 70px 20px 20px 20px;
+  background-color: #f9f9f9;
+}
+
+.figure-container {
+  flex: 0 1 calc(50% - 20px);
+  width: 300px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+  background-color: white;
+  flex-shrink: 0;
+}
+
+.figure-container img {
+  max-width: 100%;              /* Scales image proportionally */
+  height: auto;
+  max-height: 200px;
+  margin-bottom: 10px;          /* Space below the image */
+}
+
+.figure-text {
+  font-size: 20px;
+  margin-bottom:10px;
+  margin-top:10px;
+}
+
+.figure-container:hover {
+  border: 3px solid #939393;       /* Thicker border on hover */
+}
+
+.grid {
+  display: flex;
+  flex-wrap: wrap;              /* Allows wrapping of items to new rows */
+  gap: 10px;                    /* Vertical and horizontal gap between items */
+  justify-content: flex-start;  /* Align items at the start of each row */
+}
+
+@media (max-width: 880px) {
+  .grid {
+    flex-direction: column;   /* Switch to a single column layout */
+    align-items: stretch;     /* Stretch the items to the full width of the container */
+  }
+  .figure-container {
+    width: 100%;              /* Make figure container take full width */
+    margin: 0 0 10px 0;       /* Ensure some gap between items */
+  }
+  .text-container {
+    width: 100%;              /* Make it take up the full width on small screens */
+    margin: 0 0 10px 0;
+    grid-column: span 1;     
+  }
+}
+
+.text-container {
+  width: 880px;
+  max-width: 100%;
+  margin: 0;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+  background-color: white;
+  text-align: left;
+  font-size: 16px;
+  grid-column: span 2;
+}
+
+.text-container p {
+  font-size: 14px;
+  margin-top: 0px;
+}
+
+.text-container h1 {
+  font-size: 18px;
+  margin-top: 0px;
+}
+
+.copyright {
+  font-size: 12px;
+  text-align: center;
+}
+
+```
+
+``` {=html}
+
+
+<div class="banner">
+<div class="title">William F. Lamb</div>
+<div class="link"><a href="https://github.com/lambwf/" target="_blank">Github</a>
+</div>
+</div>
+<div class='grid'>
+
+<div class="text-container">
+<h1>Biography</h1>
+<p>
+I am a senior researcher at the Potsdam Institute for Climate Impact Research. My work focuses on emissions trends, climate policy analysis and carbon dioxide removal.
+</p>
+<p>
+Here you can find links to some of my work, as well as additional figures, data and analysis.
+</p>
+</div>
+
+```
+
+```{r, results='asis'}
+
+content <- read.xlsx("content.xlsx")
+
+for (i in 1:length(content$title)) {
+  
+  title <- content$title[i]
+  plot <- paste0("plots/", content$plot[i])
+  link <- content$link[i]
+  
+  cat(paste0("<div class='figure-container'>"))
+cat(paste0("<a href='", link, "' style='display: block; text-decoration: none;'>"))
+cat(paste0("<div class='figure-text'>", title, "</div>"))
+cat(paste0("<img src='", plot, "' />"))
+cat("</a>")
+cat("</div>")
+  
+}
+
+
+```
+
+</div>
+
+``` {r, results='asis'}
+
+cat(paste0("<br><footer><p class='copyright'>© ",format(Sys.Date(), "%Y")," William F. Lamb</p></footer>"))
+
+```
