@@ -1,5 +1,5 @@
 ---
-title: ""
+title: "Tidy GHG Inventories"
 output: 
   html_document:
     self_contained: true
@@ -9,143 +9,157 @@ output:
 
 library(knitr)
 library(tidyverse)
+knitr::opts_chunk$set(echo=FALSE)
 
 ```
 
-<style>
-  .banner {
-    width: 100%;
-    height: 50px;
-    background-color: #008cba;
-    color: #f5f5f5;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 0 20px;
-    box-sizing: border-box;
-    position: fixed;
-    top: 0;
-    left: 0;
-    z-index: 1000;
-  }
-  
-  .title {
-    font-size: 18px;
-  }
-  
-  .banner a {
-    color: #f5f5f5;
-    text-decoration: none;
-  }
-  
-  .banner a:hover {
-    text-decoration: underline;
-  }
-  
-  body {
-    font-family: Arial, sans-serif;
-    margin: 70px 20px 20px 20px;
-    background-color: #f9f9f9;
-  }
-  
-  .figure-container {
-    width: 700px;
-    margin: 0 auto;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    text-align: center;
-    padding: 5px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    box-sizing: border-box;
-    background-color: white;
-  }
-  
-  .figure-container svg {
-    max-width: 100%;
-    height: auto;
-    display: block;
-    margin: 0 auto 10px;
-  }
-  
-  .figure-links {
-    font-size: 12px;
-  }
-  
-  .grid {
-    display: grid;
-	  justify-content:center;
-	  align-items:center;
-	  column-gap: 10px;
-	  row-gap: 1em;
-	  grid-template-columns: 1fr 1fr;
-  }
-  
-  .text-container {
-    margin: 0 auto;
-    padding: 15px;
-    border: 1px solid #ddd;
-    border-radius: 5px;
-    box-sizing: border-box;
-    background-color: white;
-    text-align: left;
-    font-size: 16px;
-    grid-column: span 2;
-  }
-  
-  .text-container h1 {
-    font-size: 18px;
-    margin-top: 0px;
-    }
-  
-  
-  @media (min-width: 1401px) {
-    .text-container {
-      width: 100%;
-    }
-  }
-  
-  @media (max-width: 1400px) {
-    .grid {
-      grid-template-columns: 1fr;
-    }
-    .text-container {
-      grid-column: span 1;
-      max-width: 700px;
-    }
-  }
+``` {css}
 
-  
-</style>
+h1.title {
+  display: none;
+}
+
+.banner {
+  width: 100%;
+  height: 50px;
+  background-color: #008cba;
+  color: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  box-sizing: border-box;
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+}
+
+.title {
+  font-size: 18px;
+}
+
+.banner a {
+  color: #f5f5f5;
+  text-decoration: none;
+}
+
+.banner a:hover {
+  text-decoration: underline;
+}
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 70px 20px 20px 20px;
+  background-color: #f9f9f9;
+}
+
+.figure-container {
+  width: 700px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+  background-color: white;
+}
+
+.figure-container svg {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto 10px;
+}
+
+.figure-links {
+  font-size: 12px;
+}
+
+.grid {
+  display: grid;
+  justify-content:center;
+  align-items:center;
+  column-gap: 10px;
+  row-gap: 1em;
+  grid-template-columns: 1fr 1fr;
+}
+
+.text-container {
+  margin: 0 auto;
+  padding: 15px;
+  border: 1px solid #ddd;
+  border-radius: 5px;
+  box-sizing: border-box;
+  background-color: white;
+  text-align: left;
+  font-size: 16px;
+  grid-column: span 2;
+}
+
+.text-container h1 {
+  font-size: 18px;
+  margin-top: 0px;
+}
+
+
+@media (min-width: 1401px) {
+  .text-container {
+    width: 100%;
+  }
+}
+
+@media (max-width: 1400px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .text-container {
+    grid-column: span 1;
+    max-width: 700px;
+  }
+}
+
+
+```
+
+``` {=html}
+
 
 <div class="banner">
-  <div class="title">Tidy GHG Inventories</div>
-  <div class="link"><a href="https://github.com/lambwf/lambwf.github.io" target="_blank">William F. Lamb</a> | 
-  <a href="https://github.com/lambwf/Tidy-GHG-Inventories/" target="_blank">Source Code</a>
-  </div>
+<div class="title">Tidy GHG Inventories</div>
+<div class="link"><a href="https://github.com/lambwf/lambwf.github.io" target="_blank">William F. Lamb</a> | 
+<a href="https://github.com/lambwf/Tidy-GHG-Inventories/" target="_blank">Source Code</a>
+</div>
 </div>
 <div class='grid'>
 
-  <div class="text-container">These are figures using the latest national greenhouse gas inventory data submitted by countries to the UNFCCC.</div>
+<div class="text-container">These are figures using the latest national greenhouse gas inventory data submitted by countries to the UNFCCC.</div>
 
 
-```{r, echo=FALSE, results='asis'}
-# List all figure files
+```
+
+```{r, results='asis'}
+
 filenames <- list.files("plots/countries/", pattern="*.svg", full.names=TRUE)
 
-# Loop through files and generate HTML for each figure
 for (file in filenames) {
+  
   country <- sub(".*/(.*)\\.svg", "\\1", file)
+  
   link_data <- "<a target='_blank' href='https://zenodo.org/records/14637347'>data</a>"
+  
   link_png <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/", country, ".png'>png</a>")
+  
   link_pdf <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/", country, ".pdf'>pdf</a>")
   
-  # Output HTML for each figure
   cat("<div class='figure-container'>")
   cat(paste0("<img src='", file, "' alt='", country, "' />"))
   cat(paste0("<div class='figure-links'>", link_data, " | ", link_png, " | ", link_pdf, "</div>"))
   cat("</div>")
+  
 }
 
 
