@@ -90,19 +90,19 @@
 <rect x='446.43' y='148.80' width='13.46' height='13.46' style='stroke-width: 0.53; stroke: #252525; stroke-linecap: butt; stroke-linejoin: miter; fill: #4F8455;' />
 <rect x='446.43' y='162.97' width='13.46' height='13.46' style='stroke-width: 0.53; stroke: #252525; stroke-linecap: butt; stroke-linejoin: miter; fill: #6AAD75;' />
 <rect x='446.43' y='177.15' width='13.46' height='13.46' style='stroke-width: 0.53; stroke: #252525; stroke-linecap: butt; stroke-linejoin: miter; fill: #818181;' />
-<text x='465.72' y='73.52' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='57.72px' lengthAdjust='spacingAndGlyphs'>Energy: Power</text>
-<text x='465.72' y='87.69' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='64.09px' lengthAdjust='spacingAndGlyphs'>Energy: Industry</text>
-<text x='465.72' y='101.87' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='70.44px' lengthAdjust='spacingAndGlyphs'>Energy: Transport</text>
-<text x='465.72' y='116.04' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='99.32px' lengthAdjust='spacingAndGlyphs'>Energy: Buildings &amp; other</text>
-<text x='465.72' y='130.21' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='93.45px' lengthAdjust='spacingAndGlyphs'>Energy: Fuel production</text>
-<text x='465.72' y='144.39' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='78.27px' lengthAdjust='spacingAndGlyphs'>Industrial processes</text>
-<text x='465.72' y='158.56' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='42.06px' lengthAdjust='spacingAndGlyphs'>Agriculture</text>
-<text x='465.72' y='172.73' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='67.55px' lengthAdjust='spacingAndGlyphs'>Land use change</text>
-<text x='465.72' y='186.91' style='font-size: 8.80px;fill: #636363; font-family: "Liberation Sans";' textLength='24.94px' lengthAdjust='spacingAndGlyphs'>Waste</text>
+<text x='465.72' y='73.64' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='57.72px' lengthAdjust='spacingAndGlyphs'>Energy: Power</text>
+<text x='465.72' y='87.82' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='64.09px' lengthAdjust='spacingAndGlyphs'>Energy: Industry</text>
+<text x='465.72' y='101.99' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='69.96px' lengthAdjust='spacingAndGlyphs'>Energy: Transport</text>
+<text x='465.72' y='116.16' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='99.32px' lengthAdjust='spacingAndGlyphs'>Energy: Buildings &amp; other</text>
+<text x='465.72' y='130.34' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='93.45px' lengthAdjust='spacingAndGlyphs'>Energy: Fuel production</text>
+<text x='465.72' y='144.51' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='78.27px' lengthAdjust='spacingAndGlyphs'>Industrial processes</text>
+<text x='465.72' y='158.68' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='42.06px' lengthAdjust='spacingAndGlyphs'>Agriculture</text>
+<text x='465.72' y='172.86' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='67.55px' lengthAdjust='spacingAndGlyphs'>Land use change</text>
+<text x='465.72' y='187.03' style='font-size: 8.80px;fill: #636363; font-family: "Arial";' textLength='24.62px' lengthAdjust='spacingAndGlyphs'>Waste</text>
 <text x='35.43' y='34.64' style='font-size: 12.00px;fill: #636363; font-family: "Arial";' textLength='184.12px' lengthAdjust='spacingAndGlyphs'>Greenhouse gas emissions (MtCO</text>
 <text x='219.55' y='36.82' style='font-size: 8.40px;fill: #636363; font-family: "Arial";' textLength='4.67px' lengthAdjust='spacingAndGlyphs'>2</text>
 <text x='224.21' y='34.64' style='font-size: 12.00px;fill: #636363; font-family: "Arial";' textLength='24.00px' lengthAdjust='spacingAndGlyphs'>e/yr)</text>
 <text x='35.43' y='19.57' style='font-size: 14.00px; font-weight: bold;fill: #636363; font-family: "Arial";' textLength='38.87px' lengthAdjust='spacingAndGlyphs'>China</text>
-<text x='35.43' y='245.58' style='font-size: 9.00px;fill: #BDBDBD; font-family: "Arial";' textLength='141.90px' lengthAdjust='spacingAndGlyphs'>⌂ UNFCCC ⌂ Tidy GHG inventories</text>
+<text x='35.43' y='245.58' style='font-size: 9.00px;fill: #BDBDBD; font-family: "Arial";' textLength='246.18px' lengthAdjust='spacingAndGlyphs'>⌂ UNFCCC ⌂ Tidy GHG inventories ⌂ CC-BY William F. Lamb</text>
 </g>
 </svg>
