@@ -30,7 +30,7 @@
 "0","  geom_col(color='#252525',linewidth=0.25) +"
 "0","  theme_wl() + "
 "0","  scale_fill_manual(values=colors) +"
-"0","  scale_x_continuous(limits=c(1990,max(data_plots$year)+1)) +"
+"0","  scale_x_continuous(limits=c(1989,max(data_plots$year)+1)) +"
 "0","  theme(text = element_text(family = ""Arial""),"
 "0","        legend.position=""right"","
 "0","        legend.title=element_blank(),"

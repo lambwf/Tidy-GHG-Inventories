@@ -122,6 +122,12 @@ body {
   }
 }
 
+@media (max-width: 700px) {
+  .figure-container {
+    width: 100%;
+  }
+}
+
 .copyright {
   font-size: 12px;
   text-align: center;
