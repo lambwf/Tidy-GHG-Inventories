@@ -5,31 +5,7 @@
 "0","library(tidyverse)"
 "0","library(countrycode)"
 "0","library(zoo)"
-"0","library(extrafont)"
-"0","font_import(paths = ""C:/Windows/Fonts/"", pattern = ""LSANS"", prompt = FALSE)"
-"2","Scanning ttf files in C:/Windows/Fonts/ ...
-"
-"2","Extracting .afm files from .ttf files...
-"
-"2","C:\Windows\Fonts\LSANS.TTF"
-"2"," : LucidaSans already registered in fonts database. Skipping.
-"
-"2","C:\Windows\Fonts\LSANSD.TTF"
-"2"," : LucidaSans-Demi already registered in fonts database. Skipping.
-"
-"2","C:\Windows\Fonts\LSANSDI.TTF"
-"2"," : LucidaSans-DemiItalic already registered in fonts database. Skipping.
-"
-"2","C:\Windows\Fonts\LSANSI.TTF"
-"2"," : LucidaSans-Italic already registered in fonts database. Skipping.
-"
-"2","Found FontName for 0 fonts.
-"
-"2","Scanning afm files in C:/Users/lamw/AppData/Local/Programs/R/R-4.4.2/library/extrafontdb/metrics
-"
-"0","loadfonts(device = ""pdf"")"
-"2","More than one version of regular/bold/italic found for Lucida Sans. Skipping setup for this font.
-"
+"0",""
 "0","## download files from https://unfccc.int/ghg-inventories-annex-i-parties/2024"
 "0","# run scan_files.R"
 "0",""
