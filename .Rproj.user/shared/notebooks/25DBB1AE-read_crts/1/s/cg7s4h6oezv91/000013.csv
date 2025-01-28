@@ -1,0 +1,94 @@
+"0","for (i in 1:length(files_crts$iso)) {
+  
+  temp <- left_join(sector_summary,data_crts %>% 
+                     filter(iso==files_crts$iso[i]) %>% 
+                     spread(.,year,value))
+  
+  if (all(is.na(temp$iso))) {
+    
+  }
+  else {
+  
+    temp <- temp %>% 
+      mutate(iso=na.locf(iso,fromLast=T)) %>% 
+      mutate(country=na.locf(country,fromLast=T))
+  
+    data_crts_wide <- bind_rows(temp,data_crts_wide)
+    
+  }
+  
+}
+"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"
+"2","Joining with `by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3)`"

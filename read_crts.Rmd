@@ -533,13 +533,21 @@ for (i in 1:length(files_crts$iso)) {
   
   temp <- left_join(sector_summary,data_crts %>% 
                      filter(iso==files_crts$iso[i]) %>% 
-                     spread(.,year,value))
+                     spread(.,year,value),
+                    by = join_by(sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3))
   
-  temp <- temp %>% 
-    mutate(iso=na.locf(iso,fromLast=T)) %>% 
-    mutate(country=na.locf(country,fromLast=T))
+  if (all(is.na(temp$iso))) {
+    
+  }
+  else {
   
-  data_crts_wide <- bind_rows(temp,data_crts_wide)
+    temp <- temp %>% 
+      mutate(iso=na.locf(iso,fromLast=T)) %>% 
+      mutate(country=na.locf(country,fromLast=T))
+  
+    data_crts_wide <- bind_rows(temp,data_crts_wide)
+    
+  }
   
 }
 
@@ -588,6 +596,7 @@ saveWorkbook(wb_wide,paste0("data/Tidy-GHG-Inventories-v",version,"-wide.xlsx"),
 
 colors <- c("#365f90ff", "#4672b3ff", "#659cccff", "#a3d3f7ff", "#6ccac8ff", "#e5b82cff", "#4f8455ff", "#6aad75ff", "#818181ff")
 
+
 data_plots <- data_crts %>% 
   left_join(.,read.xlsx("data/cc_inventory_sectors.xlsx") %>% select(sector_code,sector_tidy)) %>% 
   group_by(country,iso,year,sector_tidy) %>% 
@@ -596,11 +605,11 @@ data_plots <- data_crts %>%
 data_plots <- data_plots %>% 
   mutate(sector_tidy = as.factor(sector_tidy)) %>% 
   mutate(sector_tidy = fct_relevel(sector_tidy,
-                                   "Energy: Power",
-                                   "Energy: Industry",
-                                   "Energy: Transport",
-                                   "Energy: Buildings & other",
-                                   "Energy: Fuel production",
+                                   "Energy | Power",
+                                   "Energy | Industry",
+                                   "Energy | Transport",
+                                   "Energy | Buildings & other",
+                                   "Energy | Fuel production",
                                    "Industrial processes",
                                    "Agriculture",
                                    "Land use change",
@@ -613,21 +622,10 @@ for (i in 1:length(countries)) {
   filter(country == countries[i]) %>% 
   ggplot(.,aes(x=year,y=value,fill=sector_tidy)) +
   geom_col(color='#252525',linewidth=0.25) +
-  theme_wl() + 
+  theme_wl_emissions() + 
   scale_fill_manual(values=colors) +
   scale_x_continuous(limits=c(1989,max(data_plots$year)+1)) +
-  theme(text = element_text(family = "Arial"),
-        legend.position="right",
-        legend.title=element_blank(),
-        axis.title = element_blank(),
-        axis.ticks = element_line(color="#636363",size=0.25),
-        panel.grid.major.x = element_blank(),
-        strip.background = element_blank(),
-        strip.text = element_text(size=12,color='#636363',hjust=0,face = "bold"),
-        panel.border = element_blank(),
-        axis.line = element_line(color="#636363",size = 0.25),
-        plot.title = element_text(margin = margin(t = 10)),
-        legend.key.size = unit(0.5, "cm")) +
+  theme(axis.title = element_blank()) +
   labs(title=paste0(countries[i]),
        subtitle=expression("Greenhouse gas emissions (MtCO"[2]*"e/yr)"),
        caption="⌂ UNFCCC ⌂ Tidy GHG inventories ⌂ CC-BY William F. Lamb")
