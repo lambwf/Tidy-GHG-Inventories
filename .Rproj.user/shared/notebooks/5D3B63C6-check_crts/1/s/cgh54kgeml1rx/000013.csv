@@ -33,6 +33,10 @@
 [38;5;232m[36mℹ[38;5;232m In argument: `total = as.numeric(total) * 1000`.[39m
 Caused by warning:
 [33m![39m NAs durch Umwandlung erzeugt"
+"2","Warnung: [38;5;232mThere was 1 warning in `mutate()`.[39m
+[38;5;232m[36mℹ[38;5;232m In argument: `total = as.numeric(total) * 1000`.[39m
+Caused by warning:
+[33m![39m NAs durch Umwandlung erzeugt"
 "0","  "
 "0",""
 "0","# do my leaf node emissions sum up to totals in the CRT summaries?"
