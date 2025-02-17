@@ -49,14 +49,16 @@ for (i in 1:length(countries)) {
   p <- data_plots %>% 
   filter(country == countries[i]) %>% 
   ggplot(.,aes(x=year,y=value,fill=sector_tidy)) +
-  geom_col(color='#252525',linewidth=0.25) +
+  geom_col(color='#252525',linewidth=0.25,width=1) +
   theme_wl_bar_trend() + 
   scale_fill_manual(values=colours_9_sectors) +
-  scale_x_continuous(limits=c(1989,max(data_plots$year)+1)) +
+  scale_x_continuous(limits=c(1989,max(data_plots$year)+1),
+                       expand = expansion(mult = c(0.01, 0.01)),
+                     breaks=c(1990,2000,2010,max(data_plots$year))) +
   theme(axis.title = element_blank()) +
   labs(title=paste0(countries[i]),
-       subtitle=expression("Greenhouse gas emissions (MtCO"[2]*"e/yr)"),
-       caption="⌂ UNFCCC  ⌂ Tidy GHG inventories  ⌂ CC-BY William F. Lamb")
+       subtitle=expression("Greenhouse gas emissions inventory (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ CC-BY William F. Lamb")
 
   
   ggsave(paste0("plots/countries/",countries[i],".png"), plot = p, device = "png", dpi = 300, width = 8, height = 4)
