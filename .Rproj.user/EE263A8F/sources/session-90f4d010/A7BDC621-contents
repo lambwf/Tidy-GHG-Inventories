@@ -1,0 +1,236 @@
+---
+title: "National-GHG-Inventory-Tracking"
+author: "William F. Lamb"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(zoo)
+library(ggraph)
+library(patchwork)
+
+load('data/data_crts.RData')
+load("data/data_crt_files.RData")
+load('data/data_disturbances.RData')
+
+source("https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R")
+
+
+
+```
+
+``` {r methane_pledges, fig.height=8,fig.width=10}
+
+data <- data_crts %>% 
+  filter(gas=="ch4") %>%
+  #left_join(.,read.xlsx("data/cc_inventory_sectors.xlsx") %>% select(sector_code,sector_tidy,sector_tidy_order)) %>% 
+  #group_by(country,iso,year,sector_tidy,sector_tidy_order) %>% 
+  group_by(country,iso,year,sector_lv2) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6)
+
+top_methane_sectors <- data_crts %>% 
+  filter(gas=="ch4") %>% 
+  filter(year==2021) %>% 
+  group_by(sector_lv1,sector_lv2,sector_lv3) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6) %>% 
+  arrange(desc(value))
+
+top <- data %>% 
+  filter(year==2021) %>% 
+  group_by(country,iso) %>% 
+  summarise(value=sum(value)) %>% 
+  arrange(desc(value)) %>% 
+  ungroup() %>% 
+  mutate(rank=1) %>% 
+  mutate(rank=cumsum(rank)) %>% 
+  select(iso,rank)
+
+data <- left_join(data,top)
+data$country <- as.factor(data$country)
+data$country <- fct_reorder(data$country,data$rank)
+#data$sector_tidy <- as.factor(data$sector_tidy)
+#data$sector_tidy <- fct_reorder(data$sector_tidy,data$sector_tidy_order)
+
+data %>% 
+  filter(rank<5) %>% 
+  filter(year>=2000) %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_lv2)) +
+  geom_col(colour="#252525",linewidth=0.25,width=1) +
+  facet_wrap(.~country,scales="free",ncol=2) +
+  theme_wl_bar_trend() +
+  #scale_fill_manual(values=colours_9_sectors) +
+  theme(legend.position = "right",
+        axis.title = element_blank()) +
+  labs(title="Methane emissions")
+
+```
+
+
+
+``` {r track_natural_disturbances, fig.width=10,fig.height=3.5}
+
+data <- data_crts %>% 
+  filter(value!=0) %>% 
+  group_by(across(-one_of("gas","value"))) %>% 
+  summarise(value=sum(value,na.rm=T))
+
+data <- data %>% 
+  group_by(country,iso,sector_lv1,year) %>% 
+  summarise(value=sum(value)/1e6)
+
+data <- rbind(data,data_disturbances %>% 
+                group_by(country,iso,sector_lv1=sector,year) %>%
+                summarise(value=sum(value,na.rm=T)/1000) %>% 
+                mutate(sector_lv1="Natural disturbances on managed land"))
+
+data <- data %>% 
+  ungroup() %>% 
+  mutate(sector_lv1=as.factor(sector_lv1)) %>% 
+  mutate(sector_lv1=fct_relevel(sector_lv1,"Natural disturbances on managed land","Energy","Industrial processes and product use","Agriculture","Land use, land-use change and forestry","Waste"))
+
+
+data <- data %>%
+  filter(iso %in% c("AUS","CAN"))
+
+colors <- c("#ff6048ff","#659cccff","#e5b82cff", "#4f8455ff", "#6aad75ff", "#818181ff")
+colors <- c("#ff9055ff","#659cccff","#e5b82cff", "#4f8455ff", "#6aad75ff", "#818181ff")
+
+
+p <- data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_lv1)) + 
+  geom_col(color='#252525',linewidth=0.25) +
+  facet_wrap(.~country,ncol=2,scales="free") +
+  theme_wl_bar_trend() +
+  scale_fill_manual(values=colors) +
+  theme(axis.title = element_blank()) +
+  labs(title="Countries reporting natural disturbances on managed land",
+    subtitle=expression("Greenhouse gas emissions (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC ⌂ Tidy GHG inventories ⌂ CC-BY William F. Lamb")
+p  
+
+#ggsave("plots/natural_disturbances.png", plot = p, device = "png", width = 10, height = 3.5)
+
+```
+
+``` {r track_military_operations,fig.width=10,fig.height=6}
+
+
+data <- data_crts %>% 
+  filter(value!=0) %>% 
+  group_by(across(-one_of("gas","value"))) %>% 
+  summarise(value=sum(value,na.rm=T))
+
+data <- data %>% 
+  group_by(country,iso,sector_lv1,year) %>% 
+  summarise(value=sum(value)/1e6)
+
+
+data <- rbind(data,data_memos %>% 
+                group_by(country,iso,sector_lv1=sector,year) %>%
+                summarise(value=sum(value,na.rm=T)/1000) %>% 
+                filter(sector_lv1=="Multilateral operations"))
+
+data <- data %>% 
+  ungroup() %>% 
+  mutate(sector_lv1=as.factor(sector_lv1)) %>% 
+  mutate(sector_lv1=fct_relevel(sector_lv1,"Multilateral operations","Energy","Industrial processes and product use","Agriculture","Land use, land-use change and forestry","Waste"))
+
+colors <- c("#ff9055ff","#659cccff","#e5b82cff", "#4f8455ff", "#6aad75ff", "#818181ff")
+
+countries <- data_memos %>% 
+  filter(sector=="Multilateral operations") %>% 
+  filter(!is.na(value)) %>% 
+  mutate(include=ifelse(value>0,1,0)) %>% 
+  group_by(iso) %>% 
+  mutate(include=sum(include)) %>% 
+  filter(include>0) %>% 
+  select(iso) %>% 
+  distinct()
+
+data <- data %>% 
+  filter(iso %in% countries$iso)
+
+p <- data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_lv1)) + 
+  geom_col(color='#252525',linewidth=0.25) +
+  facet_wrap(.~country,ncol=2,scales="free") +
+  theme_wl_emissions() +
+  scale_fill_manual(values=colors) +
+  theme(axis.title = element_blank()) +
+  labs(title="Countries reporting multilateral operations",
+       subtitle=expression("Greenhouse gas emissions (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC ⌂ Tidy GHG inventories ⌂ CC-BY William F. Lamb")
+p  
+
+
+
+
+
+```
+
+``` {r track_co2_storage,fig.width=8,fig.height=3.5}
+
+
+data <- data_crts %>% 
+  filter(value!=0) %>% 
+  group_by(across(-one_of("gas","value"))) %>% 
+  summarise(value=sum(value,na.rm=T))
+
+data <- data %>% 
+  group_by(country,iso,sector_lv1,year) %>% 
+  summarise(value=sum(value)/1e6)
+
+
+data <- rbind(data,data_memos %>% 
+                group_by(country,iso,sector_lv1=sector,year) %>%
+                summarise(value=-sum(value,na.rm=T)/1e6) %>% 
+                filter(sector_lv1=="CO2 captured "))
+
+data <- data %>% 
+  ungroup() %>% 
+  mutate(sector_lv1=as.factor(sector_lv1)) %>% 
+  mutate(sector_lv1=fct_relevel(sector_lv1,"CO2 captured ","Energy","Industrial processes and product use","Agriculture","Land use, land-use change and forestry","Waste"))
+
+colors <- c("#ff9055ff","#659cccff","#e5b82cff", "#4f8455ff", "#6aad75ff", "#818181ff")
+
+countries <- data_memos %>% 
+  filter(sector=="CO2 captured ") %>% 
+  filter(!is.na(value)) %>% 
+  mutate(include=ifelse(value>0,1,0)) %>% 
+  group_by(iso) %>% 
+  mutate(include=sum(include)) %>% 
+  filter(include>0) %>% 
+  select(iso) %>% 
+  distinct()
+
+data <- data %>% 
+  filter(iso %in% countries$iso)
+
+p <- data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_lv1)) + 
+  geom_col(color='#252525',linewidth=0.25) +
+  facet_wrap(.~country,ncol=2,scales="free") +
+  theme_wl_emissions() +
+  scale_fill_manual(values=colors) +
+  theme(axis.title = element_blank()) +
+  labs(title="Countries reporting CO2 captured ",
+       subtitle=expression("Greenhouse gas emissions (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC ⌂ Tidy GHG inventories ⌂ CC-BY William F. Lamb")
+p  
+
+
+
+
+
+```
+
+
+

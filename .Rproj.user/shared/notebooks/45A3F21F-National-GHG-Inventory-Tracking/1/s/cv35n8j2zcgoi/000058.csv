@@ -1,0 +1,8 @@
+"0","top_methane_sectors <- data_crts %>% 
+  filter(gas==""ch4"") %>% 
+  filter(year==2021) %>% 
+  group_by(sector_lv1,sector_lv2,sector_lv3) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6) %>% 
+  arrange(desc(value))
+"
+"2","`summarise()` has grouped output by 'sector_lv1', 'sector_lv2'. You can override using the `.groups` argument."

@@ -1,0 +1,259 @@
+---
+title: "National-GHG-Inventory-Decomposition"
+author: "William Lamb"
+date: "`r Sys.Date()`"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(zoo)
+
+load("data/data_crts_activity.RData")
+
+data_crts_activity <- data_crts_activity %>% 
+  select(iso,country,sector_code,sector_level,sector_lv1,sector_lv2,sector_lv3,sector_lv4,sector_description,fuel,year,everything()) %>% 
+  mutate(year=as.numeric(year))
+
+source("https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R")
+
+
+```
+
+
+``` {r data_prep}
+
+data_decomp <- data_crts_activity %>% 
+  gather(.,var,value,activity:captured_co2)
+
+
+## aggregate to sector lv4 and collapse fuels
+data_decomp <- data_decomp %>% 
+  group_by(across(c(-sector_code,-sector_level,-sector_description,-value,-fuel))) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1000)
+
+data_decomp <- spread(data_decomp,var,value)
+
+
+## filter activities with 0s in all time periods
+data_decomp <- data_decomp %>% 
+  group_by(country,iso,sector_lv1,sector_lv2,sector_lv3,sector_lv4) %>% 
+  mutate(remove=ifelse(sum(activity)==0,1,0)) %>% 
+  ungroup() %>% 
+  filter(remove!=1) %>%
+  select(-remove)
+
+
+## calculate e_ghg and recalculate emissions factor
+data_decomp <- data_decomp %>% 
+  select(-ef_ch4,-ef_co2,-ef_n2o) %>% 
+  mutate(e_ghg = (e_ch4*28)+(e_n2o*265)+e_co2) %>% 
+  mutate(ef_ghg = e_ghg/activity)
+
+## give token values to sectors that transition from 0 to a number
+## (propagating ef backwards)
+data_decomp <- data_decomp %>%
+  group_by(country,iso,sector_lv1,sector_lv2,sector_lv3,sector_lv4) %>% 
+  mutate(ef_ghg=ifelse(activity==0,NA,ef_ghg)) %>%      ## for the special cases where you have no activity, but some emissions
+  fill(ef_ghg,.direction = "updown") %>% 
+  mutate(activity=ifelse(activity==0,0.0001,activity)) %>% 
+  mutate(e_ghg=activity*ef_ghg)
+
+
+## calculate activity share
+data_decomp <- data_decomp %>% 
+  group_by(iso,year) %>% 
+  mutate(activity_total=sum(activity)) %>% 
+  ungroup %>% 
+  mutate(activity_share=activity/activity_total)
+
+data_decomp <- data_decomp %>% 
+  select(-e_ch4,-e_n2o,-e_co2)
+
+data_decomp <- data_decomp %>% arrange(across(8))
+
+
+# blarg <- data_decomp %>% ungroup() %>% select(sector_lv1,sector_lv2,sector_lv3,sector_lv4,year,activity) %>% 
+#   spread(.,year,activity)
+
+
+
+
+```
+
+
+``` {r decomp}
+
+i=1991
+data_decomp_all <- data.frame()
+
+for (i in 1993:2022) {
+  
+  # select time steps
+  data <- data_decomp %>%
+    filter(year %in% c(i-3,i))
+  
+  # calculate logarithmic mean of the emissions change per sector
+  data <- data %>%
+    group_by(iso,sector_lv4) %>% 
+    mutate(w=(last(e_ghg)-first(e_ghg))/(log(last(e_ghg))-log(first(e_ghg)))) %>% 
+    mutate(w=ifelse(last(e_ghg)==first(e_ghg),last(e_ghg),w))
+  
+  # calculate activity effect
+  data <- data %>%
+    mutate(aw=log(last(activity_total)/first(activity_total))) %>% 
+    mutate(A=w*aw) 
+  
+  # calculate structure and intensity effects
+  data <- data %>% 
+    group_by(iso,sector_lv4) %>% 
+    mutate(S=w*(log(last(activity_share)/first(activity_share)))) %>% 
+    mutate(I=w*(log(last(ef_ghg)/first(ef_ghg)))) %>% 
+    mutate(E=last(e_ghg)-first(e_ghg))
+  
+  ## check sums
+  data <- data %>%
+    ungroup() %>% 
+    mutate(test=A+S+I)
+  
+  ## join
+  data_decomp_all <- rbind(data_decomp_all,data %>% filter(year==i))
+  
+}
+
+
+data_decomp_all <- data_decomp_all %>% arrange(across(2))
+
+
+```
+
+
+
+
+```{r figures,fig.width=9,fig.height=4}
+
+
+
+
+# data_decomp_summary <- data_decomp_all %>%
+#   filter(iso %in% c("AUS")) %>%
+#   group_by(country,iso,year,sector_lv3) %>%
+#   summarise_at(vars(A,S,I,E),sum) %>%
+#   gather(.,var,value,A:E)
+# 
+# data_decomp_summary %>%
+#   mutate(highlight=ifelse(sector_lv3=="Transport",1,0.2)) %>%
+#   filter(var!="E") %>%
+#   ggplot(.,aes(x=year,y=value,fill=var,alpha=highlight)) +
+#   geom_col(color='#636363')+
+#   geom_point(data=data_decomp_summary %>% filter(var=="E") %>% group_by(country,iso,year) %>% summarise(value=sum(value)),
+#              inherit.aes=FALSE,
+#              aes(x=year,y=value))+
+#   facet_wrap(.~country,scales="free_y")
+
+
+data_decomp_summary <- data_decomp_all %>%
+  filter(iso %in% c("AUS","TUR","GBR","USA","DNK","ITL","JPN")) %>%
+  group_by(country,iso,year) %>%
+  summarise_at(vars(A,S,I,E),sum) %>%
+  gather(.,var,value,A:E)
+
+plot <- data_decomp_summary %>%
+  filter(var!="E") %>%
+  ggplot(.,aes(x=year,y=value,fill=var)) +
+  geom_col(color='#252525',width=1,linewidth=0.25)+
+  geom_point(data=data_decomp_summary %>% filter(var=="E") %>% group_by(country,iso,year) %>% summarise(value=sum(value)),
+             inherit.aes=FALSE,
+             aes(x=year,y=value),size=1) +
+  facet_wrap(.~country,scales="free_y")  +
+  scale_fill_manual(values=c("#ff9055ff","#7dd396ff","#659cccff")) +
+  theme_wl() +
+  theme(legend.title=element_blank(),
+        strip.background = element_blank(),
+        strip.text = element_text(hjust=0,size=12,face = "bold",colour = "#636363"),
+        axis.title = element_blank()
+        ) +
+  labs(title="Decomposition of change in energy sector emissions", subtitle="3 year change, MtCO2e")
+plot
+
+ggsave("plots/decomposition/test.png", plot, device = "png", dpi = 300, width = 9, height = 5)
+
+#"#ff9055ff" "#659cccff" "#e5b82cff" "#7dd396ff" "#818181ff" "#9467bdff" "#17becfff" "#d45087ff"
+# 
+# data_decomp_summary <- data_decomp_all %>%
+#   filter(iso %in% c("AUS","FRA","GBR","USA","DNK","ITL","IRL","JPN","CHE","ESP")) %>%
+#   group_by(country,iso,year) %>%
+#   summarise_at(vars(A,S,I,E),sum) %>%
+#   gather(.,var,value,A:E)
+# 
+# data_decomp_summary %>%
+#   mutate(highlight=ifelse(iso=="USA",1,0.2)) %>%
+#   #filter(var!="E") %>%
+#   ggplot(.,aes(x=year,y=value,fill=var,alpha=highlight)) +
+#   geom_col(color='#636363')+
+#   # geom_point(data=data_decomp_summary %>% filter(var=="E") %>% group_by(year) %>% summarise(value=sum(value)),
+#   #            inherit.aes=FALSE,
+#   #            aes(x=year,y=value))+
+#   facet_wrap(.~var,scales="free_y")
+
+```
+
+
+
+``` {r easy_lv2_decomp}
+
+## E = A * A/E
+# 
+# # select time steps
+# data_decomp <- data_decomp %>%
+#   filter(year %in% c(1990,2022))
+# 
+# 
+# # calculate logarithmic mean of the emissions change
+# data_decomp <- data_decomp %>%
+#   group_by(iso,sector_lv4) %>%
+#   mutate(w=(last(e_ghg)-first(e_ghg))/(log(last(e_ghg))-log(first(e_ghg))))
+# 
+# 
+# # calculate activity and intensity effects
+# data_decomp <- data_decomp %>%
+#   group_by(iso,sector_lv4) %>%
+#   mutate(A=w*(log(last(activity)/first(activity)))) %>%
+#   mutate(I=w*(log(last(ef_ghg)/first(ef_ghg)))) %>%
+#   mutate(E=last(e_ghg)-first(e_ghg))
+# 
+# blarg <- data_decomp %>%
+#   filter(year==2022) %>%
+#   group_by(iso) %>%
+#   summarise_at(vars(activity,A,I,E),sum,na.rm=T)
+
+
+# #select time steps
+# data_decomp <- data_decomp %>%
+#   filter(year %in% c(1990,2022)) %>%
+#   group_by(iso,year) %>%
+#   summarise(activity=sum(activity),e_ghg=sum(e_ghg)) %>%
+#   mutate(ef_ghg=e_ghg/activity)
+# 
+# # calculate logarithmic mean of the total emissions change
+# data_decomp <- data_decomp %>%
+#   mutate(w=(last(e_ghg)-first(e_ghg))/(log(last(e_ghg))-log(first(e_ghg))))
+# 
+# 
+# # calculate activity and intensity effects
+# data_decomp <- data_decomp %>%
+#   mutate(A=w*(log(last(activity)/first(activity)))) %>%
+#   mutate(I=w*(log(last(ef_ghg)/first(ef_ghg)))) %>%
+#   group_by(iso) %>%
+#   mutate(E=last(e_ghg)-first(e_ghg))
+
+
+
+
+```
+
