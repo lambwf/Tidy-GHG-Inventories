@@ -1,8 +1,0 @@
-"0","
-data_plots <- data_crts %>% 
-  left_join(.,read.xlsx(""data/cc_inventory_sectors.xlsx"") %>% select(sector_code,sector_tidy)) %>% 
-  group_by(country,iso,year,sector_tidy) %>% 
-  summarise(value=sum(value,na.rm=T)/1e6)
-"
-"2","Joining with `by = join_by(sector_code)`"
-"2","`summarise()` has grouped output by 'country', 'iso', 'year'. You can override using the `.groups` argument."

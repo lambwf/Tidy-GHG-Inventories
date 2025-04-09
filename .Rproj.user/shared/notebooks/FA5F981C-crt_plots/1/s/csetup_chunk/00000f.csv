@@ -4,6 +4,7 @@
 "0","library(openxlsx)"
 "0","library(tidyverse)"
 "0","library(countrycode)"
+"0","library(maps)"
 "0",""
 "0","load(""data/data_crts.RData"")"
 "0","source(""https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R"")"
