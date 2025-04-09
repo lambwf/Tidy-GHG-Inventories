@@ -1,0 +1,166 @@
+---
+title: "crt_plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(maps)
+
+load("data/data_crts.RData")
+source("https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R")
+
+```
+
+
+```{r plots, echo=FALSE, fig.height=3.5,fig.width=8}
+
+
+#colors <- c("#365f90ff", "#4672b3ff", "#659cccff", "#a3d3f7ff", "#6ccac8ff", "#e5b82cff", "#4f8455ff", "#6aad75ff", "#818181ff")
+
+
+data_plots <- data_crts %>% 
+  left_join(.,read.xlsx("data/cc_inventory_sectors.xlsx") %>% select(sector_code,sector_tidy)) %>% 
+  group_by(country,iso,year,sector_tidy) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6)
+
+data_plots <- data_plots %>% 
+  mutate(sector_tidy = as.factor(sector_tidy)) %>% 
+  mutate(sector_tidy = fct_relevel(sector_tidy,
+                                   "Energy | Power",
+                                   "Energy | Industry",
+                                   "Energy | Transport",
+                                   "Energy | Buildings & other",
+                                   "Energy | Fuel production",
+                                   "Industrial processes",
+                                   "Agriculture",
+                                   "Land use change (LULUCF)",
+                                   "Waste"))
+
+countries = unique(data_plots$country)
+for (i in 1:length(countries)) {
+  
+  data <- data_plots %>% 
+  filter(country == countries[i])
+  
+  p <- data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_tidy)) +
+  geom_col(color='#252525',linewidth=0.25,width=1) +
+  theme_wl_bar_trend() + 
+  scale_fill_manual(values=colours_9_sectors) +
+  scale_x_continuous(limits=c(1989,max(data_plots$year)+1),
+                       expand = expansion(mult = c(0.01, 0.01)),
+                     breaks=c(1990,2000,2010,max(data_plots$year))) +
+  theme(axis.title = element_blank()) +
+  labs(title=paste0(countries[i]),
+       subtitle=expression("Greenhouse gas emissions inventory (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ CC-BY William F. Lamb")
+
+  
+  ggsave(paste0("plots/countries/",countries[i],".png"), plot = p, device = "png", dpi = 300, width = 8, height = 4)
+  ggsave(paste0("plots/countries/",countries[i],".pdf"), plot = p, device = cairo_pdf, width = 8, height = 4)
+  ggsave(paste0("plots/countries/",countries[i],".svg"), plot = p, device = "svg", width = 8, height = 4)
+
+  data <- data %>% 
+    mutate(units="MtCO2e (GWP100 AR5)") %>% 
+    select(country,iso,sector=sector_tidy,year,units,value)
+  
+  
+  ## Save data
+  
+  wb <- createWorkbook()
+  addWorksheet(wb,"info")
+  addWorksheet(wb,"data")
+  info = data.frame(a=c("Author","Contact","Data sources","See also"),
+                    b=c("William F. Lamb",
+                        "william.lamb@pik-potsdam.de",
+                        "Lamb, W. F. (2025). Tidy GHG Inventories (1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14945466",
+                        "https://doi.org/10.5281/zenodo.14512139"))
+  
+  writeData(wb, sheet = "info",info,colNames = F, rowNames = F)
+  writeData(wb, sheet = "data",data,colNames = T, rowNames = F)
+  
+  saveWorkbook(wb,paste0("plots/countries/plot data/",countries[i],".xlsx"),overwrite=T)
+  
+  
+}
+
+
+
+
+```
+
+
+```{r map,echo=FALSE,warning=FALSE,dpi=300,fig.height=4}
+
+
+
+## Get map data and clean up iso codes
+
+map <- map_data("world") %>% filter(region!="Antarctica")
+map <- map %>% 
+  left_join(.,map %>% 
+              select(region) %>% 
+              distinct() %>% 
+              mutate(iso=countrycode(region,"country.name","iso3c")),
+            by=join_by(region))
+
+
+## Get a list of countries that have complete inventories
+
+country_list <- data_crts %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value=sum(value,na.rm=T)) %>% 
+  group_by(iso,country) %>% 
+  mutate(n=n())
+
+country_list <- country_list %>% 
+  ungroup() %>% 
+  mutate(coverage=ifelse(n==33,"Complete","Partial")) %>% 
+  select(iso,country,n,coverage) %>% 
+  distinct()
+
+
+## Join to map data
+
+map <- map %>% left_join(.,country_list,by=join_by(iso))
+map <- map %>% mutate(coverage=ifelse(is.na(coverage),"Not submitted",coverage))
+
+
+## Arrange factors, get date
+
+map$coverage <- as.factor(map$coverage)
+map$coverage <- fct_relevel(map$coverage,"Complete","Partial","Not submitted")
+
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
+current_date <- paste0("Submissions up to ",format(Sys.Date(), "%B %d, %Y"))
+current_date <- str_wrap(current_date,width=20)
+
+## Plot
+
+p <- ggplot() + 
+  geom_polygon(data = map, aes(x=long, y = lat, group=group, fill=coverage),color="#636363",size=0.2,na.rm=T) + 
+  #coord_fixed(1,xlim=c(-120,70),ylim=c(0,70)) +
+  scale_fill_manual(values= c("Complete"="#7dd396ff",
+                              "Partial"="#659cccff",
+                              "Not submitted"='#818181ff')) +
+  theme_wl_empty() +
+  theme(legend.position = c(0.11, 0.2),
+        panel.border = element_rect(colour = "#636363",fill=NA),
+        legend.title=element_text(size=10)) +
+  labs(subtitle = paste0("GHG inventory submissions under the latest Biennial Transparency Reports"),
+       caption = "⌂ Data: UNFCCC, Tidy GHG inventories   ⌂ CC-BY William F. Lamb \n⌂ Note: Partial indicates missing years since 1990; not submitted includes incorrectly formatted CRTs",
+       fill=current_date)
+p  
+
+
+ggsave(paste0("plots/map-coverage.png"), plot = p, device = "png", dpi = 300, height = 4)
+ggsave(paste0("plots/map-coverage.pdf"), plot = p, device = cairo_pdf, height = 4)
+ggsave(paste0("plots/map-coverage.svg"), plot = p, device = "svg", height = 4)
+
+```
