@@ -150,7 +150,7 @@ for (i in 1:length(countries)) {
   theme(axis.title = element_blank()) +
   labs(title=paste0(countries[i]),
        subtitle=expression("Greenhouse gas emissions inventory (MtCO"[2]*"e/yr)"),
-       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ CC-BY William F. Lamb")
+       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ GWP100 AR5   ⌂ CC-BY William F. Lamb")
 
   
   ggsave(paste0("plots/countries/",countries[i],".png"), plot = p, device = "png", dpi = 300, width = 8, height = 4)
