@@ -1,0 +1,147 @@
+---
+title: "CDR-Pledges"
+author: "William F. Lamb"
+---
+
+```{r setup, include=FALSE}
+
+#knitr::opts_chunk$set(echo = FALSE)
+
+rm(list = ls())
+library(tidyverse)
+library(googlesheets4)
+
+source("https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R")
+
+load("../Tidy-GHG-Inventories/data/data_crts.RData")
+
+
+```
+
+``` {r update_emissions_data}
+
+## add the latest inventory data to the national pledges sheet, use tidy inventories, gap fill with PRIMAP Hist-CR
+# https://docs.google.com/spreadsheets/d/12XV-aggFpRc4iDfC8XHlb7SemZEvXjcjb_Fcf-nUnj8/edit?gid=1146210695#gid=1146210695
+
+## Get list of countries
+
+ndc_countries <- read_sheet("https://docs.google.com/spreadsheets/d/12XV-aggFpRc4iDfC8XHlb7SemZEvXjcjb_Fcf-nUnj8",sheet="NDC-data",range = "A4:B")
+
+
+## Use the latest Tidy GHG Inventory data
+
+data_exluc <- data_crts %>% 
+  filter(!grepl("Land",sector_lv1)) %>% 
+  group_by(country,iso,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1e6) %>% 
+  mutate(source="Tidy GHG Inventories") %>% 
+  spread(year,value) %>% 
+  ungroup()
+
+data_exluc <- left_join(ndc_countries,data_exluc %>% select(-country),by = join_by(iso)) %>% 
+  arrange(country)
+
+
+data_luc <- data_crts %>% 
+  filter(grepl("Land",sector_lv1)) %>% 
+  group_by(country,iso,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1e6) %>% 
+  mutate(source="CRTs & BTRs") %>% 
+  spread(year,value) %>% 
+  ungroup()
+
+data_luc <- left_join(ndc_countries,data_luc %>% select(-country),by = join_by(iso)) %>% 
+  arrange(country)
+
+
+## Gap fill missing data with PRIMAP HISTCR
+
+data_primap <- read.csv("../GHG-Emissions-Assessment/sources/PRIMAP/Guetschow_et_al_2025-PRIMAP-hist_v2.6.1_final_no_rounding_13-Mar-2025.csv")
+data_primap <- gather(data_primap,year,value,X1750:X2023)
+data_primap$year <- gsub("X","",data_primap$year)
+names(data_primap) <- c("source","scenario","provenance","area","gas","unit","category","year","value") 
+data_primap <- data_primap %>% 
+  filter(year>=1990) %>% 
+  filter(gas=="KYOTOGHG (AR5GWP100)") %>% 
+  filter(scenario=="HISTCR")
+
+data_primap_exluc <- data_primap %>% 
+  filter(category=="M.0.EL") %>% 
+  spread(year,value)
+
+
+
+
+```
+
+
+
+```{r load_data,include=TRUE}
+
+
+data_plots <- data_crts %>% 
+  mutate(sector_tidy=ifelse(grepl("Other",sector_lv3),"Other (settlements, wetlands, etc.)",sector_lv3)) %>% 
+  mutate(sector_tidy=ifelse(grepl("Settlements",sector_lv3),"Other (settlements, wetlands, etc.)",sector_tidy)) %>% 
+  mutate(sector_tidy=ifelse(grepl("Wetlands",sector_lv3),"Other (settlements, wetlands, etc.)",sector_tidy)) 
+
+data_plots <- data_plots %>% 
+  filter(grepl("Land use",sector_lv1)) %>% 
+  group_by(country,iso,sector_tidy,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1e6) %>% 
+  group_by(country,iso,year) %>% 
+  mutate(value_total=sum(value,na.rm=TRUE))
+
+data_plots <- data_plots %>% 
+  left_join(.,read.csv("https://raw.githubusercontent.com/openclimatedata/countrygroups/main/data/g20.csv") %>%
+              select(iso=Code) %>% 
+              mutate(G20="1"))
+
+countries = data_plots %>% 
+  ungroup() %>% 
+  filter(G20==1) %>% 
+  select(country) %>% 
+  distinct() %>% 
+  add_row(country="European Union")
+countries <- countries$country
+
+
+for (i in 1:length(countries)) {
+  
+  data <- data_plots %>% 
+  filter(country == countries[i])
+  
+  p <- data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_tidy)) +
+  geom_col(color='#252525',linewidth=0.25,width=1) +
+  geom_line(inherit.aes = FALSE,aes(x=year,y=value_total)) +
+  geom_point(inherit.aes = FALSE,aes(x=year,y=value_total),
+             shape=21,fill="white") +
+  theme_wl_bar_trend() + 
+  scale_fill_manual(values=c(
+    "Cropland" = "#e5b82cff",
+    "Forest land" = "#4f8455ff",
+    "Grassland" = "#7dd396ff",
+    "Harvested wood products" = "#ff9055ff",
+    "Other (settlements, wetlands, etc.)" = "#818181ff")) +
+  scale_x_continuous(limits=c(1989,max(data_plots$year)+1),
+                       expand = expansion(mult = c(0.01, 0.01)),
+                     breaks=c(1990,2000,2010,max(data_plots$year))) +
+  theme(axis.title = element_blank()) +
+  labs(title=paste0(countries[i]),
+       subtitle=expression("Greenhouse gas emissions inventory, LULUCF sector (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ CC-BY William F. Lamb")
+  p
+  
+  # ggsave(paste0("plots/countries/",countries[i],".png"), plot = p, device = "png", dpi = 300, width = 8, height = 4)
+  # ggsave(paste0("plots/countries/",countries[i],".pdf"), plot = p, device = cairo_pdf, width = 8, height = 4)
+  # ggsave(paste0("plots/countries/",countries[i],".svg"), plot = p, device = "svg", width = 8, height = 4)
+
+}
+
+p
+```
+
+
+``` {r }
+
+```

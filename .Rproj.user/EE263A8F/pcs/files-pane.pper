@@ -1,13 +1,13 @@
 {
     "sortOrder": [
         {
-            "columnIndex": 4,
+            "columnIndex": 2,
             "ascending": true
         },
         {
-            "columnIndex": 2,
+            "columnIndex": 4,
             "ascending": true
         }
     ],
-    "path": "C:/Users/lamw/Nextcloud/Projects/Tidy-GHG-Inventories"
+    "path": "C:/Users/lamw/Nextcloud/Projects/Countries-that-reached-peak-emissions"
 }
