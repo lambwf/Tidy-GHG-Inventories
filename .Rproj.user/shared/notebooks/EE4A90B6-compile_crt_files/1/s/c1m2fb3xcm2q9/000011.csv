@@ -7,17 +7,21 @@
 "0","  filter(is.na(is_leaf)) %>% "
 "0","  group_by(iso,country,sector_code,sector_description,sector_level,gas,units,year) %>% "
 "0","  summarise(value_totals=sum(value,na.rm=TRUE))"
-"2","`summarise()` has grouped output by 'iso', 'country', 'sector_code', 'sector_description', 'sector_level', 'gas', 'units'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'iso', 'country', 'sector_code', 'sector_description', 'sector_level', 'gas', 'units'. You can override
+using the `.groups` argument.[39m
+"
 "0","## are totals correct at lv2?"
 "0","data_test <- data %>%"
 "0","  filter(is_leaf==TRUE) %>% "
 "0","  group_by(iso,country,sector_lv2,gas,units,year) %>% "
 "0","  summarise(value=sum(value,na.rm=TRUE)) "
-"2","`summarise()` has grouped output by 'iso', 'country', 'sector_lv2', 'gas', 'units'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'iso', 'country', 'sector_lv2', 'gas', 'units'. You can override using the `.groups` argument.[39m
+"
 "0","  "
 "0","data_test <- left_join(data_test %>% rename(sector_description=sector_lv2),data_totals) %>% "
 "0","  filter(!is.na(value_totals))"
-"2","Joining with `by = join_by(iso, country, sector_description, gas, units, year)`"
+"2","[38;5;232mJoining with `by = join_by(iso, country, sector_description, gas, units, year)`[39m
+"
 "0","data_test <- data_test %>% "
 "0","  mutate(difference_abs = value_totals-value) %>% "
 "0","  mutate(difference_rel = (difference_abs/value_totals)*100) %>% "
@@ -29,11 +33,14 @@
 "0","  filter(is_leaf==TRUE) %>%"
 "0","  group_by(iso,country,dir,year_submission,sector_lv1,gas,units,year) %>% "
 "0","  summarise(value=sum(value,na.rm=TRUE)) "
-"2","`summarise()` has grouped output by 'iso', 'country', 'dir', 'year_submission', 'sector_lv1', 'gas', 'units'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'iso', 'country', 'dir', 'year_submission', 'sector_lv1', 'gas', 'units'. You can override using the
+`.groups` argument.[39m
+"
 "0","  "
 "0","data_test <- left_join(data_test %>% rename(sector_description=sector_lv1),data_totals) %>% "
 "0","  filter(!is.na(value_totals))"
-"2","Joining with `by = join_by(iso, country, sector_description, gas, units, year)`"
+"2","[38;5;232mJoining with `by = join_by(iso, country, sector_description, gas, units, year)`[39m
+"
 "0","data_test <- data_test %>% "
 "0","  mutate(difference_abs = value_totals-value) %>% "
 "0","  mutate(difference_rel = (difference_abs/value_totals)*100) %>% "

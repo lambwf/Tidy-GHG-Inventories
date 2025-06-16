@@ -5,12 +5,4 @@
 "0","library(tidyverse)"
 "0","library(countrycode)"
 "0","library(zoo)"
-"2","
-Attache Paket: ‘zoo’
-
-"
-"2","Die folgenden Objekte sind maskiert von ‘package:base’:
-
-    as.Date, as.Date.numeric
-
-"
+"0",""

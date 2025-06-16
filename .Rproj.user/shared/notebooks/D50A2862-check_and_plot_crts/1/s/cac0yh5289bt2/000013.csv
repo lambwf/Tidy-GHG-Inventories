@@ -1,8 +1,0 @@
-"0",""
-"0",""
-"0","ggsave(paste0(""plots/map-coverage.png""), plot = p, device = ""png"", dpi = 300, height = 4)"
-"2","[38;5;232mSaving 6.47 x 4 in image[39m"
-"0","ggsave(paste0(""plots/map-coverage.pdf""), plot = p, device = cairo_pdf, height = 4)"
-"2","[38;5;232mSaving 6.47 x 4 in image[39m"
-"0","ggsave(paste0(""plots/map-coverage.svg""), plot = p, device = ""svg"", height = 4)"
-"2","[38;5;232mSaving 6.47 x 4 in image[39m"

@@ -17,7 +17,9 @@
 "0","  select(-EU,-dir,-year_submission) %>% "
 "0","  group_by(across(!all_of(""value""))) %>% "
 "0","  summarise(value=sum(value,na.rm=TRUE)) "
-"2","`summarise()` has grouped output by 'country', 'iso', 'sector_code', 'sector_level', 'sector_lv1', 'sector_lv2', 'sector_lv3', 'gas', 'units'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'country', 'iso', 'sector_code', 'sector_level', 'sector_lv1', 'sector_lv2', 'sector_lv3', 'gas',
+'units'. You can override using the `.groups` argument.[39m
+"
 "0","data_eu <- data_eu %>%  "
 "0","  filter(year!=2023) %>% "
 "0","  mutate(dir=""Underlying national CRTs"",year_submission=""2024/2025"")"
@@ -43,7 +45,9 @@
 "0","  select(-EU,-dir,-year_submission) %>% "
 "0","  group_by(across(!all_of(""value""))) %>% "
 "0","  summarise(value=sum(value,na.rm=TRUE)) "
-"2","`summarise()` has grouped output by 'country', 'iso', 'sector_code', 'sector_level', 'sector', 'gas', 'units'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'country', 'iso', 'sector_code', 'sector_level', 'sector', 'gas', 'units'. You can override using the
+`.groups` argument.[39m
+"
 "0","data_eu_memos <- data_eu_memos %>%  "
 "0","  filter(year!=2023) %>% "
 "0","  mutate(dir=""Underlying national CRTs"",year_submission=""2024/2025"")"

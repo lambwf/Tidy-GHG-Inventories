@@ -1,6 +1,6 @@
 "0",""
 "0","############ version"
-"0","version = ""1.1"""
+"0","version = ""1.2"""
 "0",""
 "0","data_crts <- data"
 "0","save(data_crts,data_memos,file=paste0(""data/data_crts_v"",version,"".RData""))"
@@ -46,7 +46,8 @@
 "0","  summarise(value=sum(value,na.rm=TRUE)/1e6) %>% "
 "0","  mutate(value=ifelse(value==0,NA,value)) %>% "
 "0","  spread(.,year,value)"
-"2","`summarise()` has grouped output by 'country', 'iso', 'file'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'country', 'iso', 'file'. You can override using the `.groups` argument.[39m
+"
 "0","writeData(wb_long, sheet = ""info"", info, colNames = F, rowNames = F)"
 "0","writeData(wb_long, sheet = ""data"", data_crts %>% select(-dir,-year_submission), colNames = T, rowNames = F)"
 "0","writeData(wb_long, sheet = ""memos"", data_memos %>% select(-dir,-year_submission), colNames = T, rowNames = F)"

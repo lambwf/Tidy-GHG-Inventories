@@ -1,6 +1,23 @@
-"0","blarg <- data_crts %>% 
-  filter(iso==""EU27"") %>% 
-  group_by(year,sector_lv1) %>% 
-  summarise(value=sum(value,na.rm=T))
+"0","
+check <- data_crts %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE))
 "
-"2","`summarise()` has grouped output by 'year'. You can override using the `.groups` argument."
+"2","[38;5;232m`summarise()` has grouped output by 'iso', 'country'. You can override using the `.groups` argument.[39m
+"
+"0",""
+"0","check <- left_join(check,data_crts_totals,by=join_by(iso,year))"
+"0",""
+"0","check <- check %>% "
+"0","  mutate(difference_abs=value-total) %>% "
+"0","  mutate(difference_rel=(difference_abs/value)*100) %>% "
+"0","  filter(abs(difference_rel)>0.01)"
+"0","  "
+"0",""
+"0",""
+"0","blarg <- data_crts %>% "
+"0","  filter(iso==""EU27"") %>% "
+"0","  group_by(year,sector_lv1) %>% "
+"0","  summarise(value=sum(value,na.rm=T))"
+"2","[38;5;232m`summarise()` has grouped output by 'year'. You can override using the `.groups` argument.[39m
+"

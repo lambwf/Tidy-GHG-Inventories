@@ -30,6 +30,8 @@
 "0","}"
 "0",""
 "0",""
+"0","## Check there are no subfolders or funny files!!"
+"0",""
 "0",""
 "0","## unzip every folder in a folder... (some special cases)"
 "0","# special_folder <- data.frame(dir=list.files(path = ""sources/new/EU_CRT_1990_2023/zipped"", pattern = ""\\.zip$"", full.names = TRUE))"

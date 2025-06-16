@@ -1,0 +1,12 @@
+"0","
+btr_webpage <- fetch_webpage(""https://unfccc.int/first-biennial-transparency-reports"")
+
+btr_links <- extract_crt_links(btr_webpage) %>% 
+  mutate(iso=countrycode(country,'country.name','iso3c'))
+"
+"2","G2;H2;Warnungh: [38;5;232mThere was 1 warning in `mutate()`.[39m
+[38;5;232m[36mℹ[38;5;232m In argument: `iso = countrycode(country, ""country.name"", ""iso3c"")`.[39m
+Caused by warning:
+[33m![39m Some values were not matched unambiguously: European Uniong
+"
+"0",""
