@@ -69,9 +69,10 @@ body {
   background-color: white;
 }
 
-.figure-container svg {
+.figure-container img {
   max-width: 100%;
   height: auto;
+  max-height: 300px;
   display: block;
   margin: 0 auto 10px;
 }
