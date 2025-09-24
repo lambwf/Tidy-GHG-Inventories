@@ -29,8 +29,7 @@
 "0","data_plots <- data_compare %>% "
 "0","  group_by(country,iso,year,year_submission) %>% "
 "0","  summarise(value=sum(value,na.rm=TRUE)/1e6)"
-"2","[38;5;232m`summarise()` has grouped output by 'country', 'iso', 'year'. You can override using the `.groups` argument.[39m
-"
+"0",""
 "0","countries = unique(data_plots$country)"
 "0",""
 "0",""

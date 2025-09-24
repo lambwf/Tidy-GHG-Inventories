@@ -7,10 +7,7 @@
 "0","  left_join(.,read.xlsx(""data/cc_inventory_sectors.xlsx"",sheet=2) %>% select(sector_code,sector_tidy)) %>% "
 "0","  group_by(country,iso,year,sector_tidy) %>% "
 "0","  summarise(value=sum(value,na.rm=T)/1e6)"
-"2","[38;5;232mJoining with `by = join_by(sector_code)`[39m
-"
-"2","[38;5;232m`summarise()` has grouped output by 'country', 'iso', 'year'. You can override using the `.groups` argument.[39m
-"
+"0",""
 "0","data_plots <- data_plots %>% "
 "0","  mutate(sector_tidy = as.factor(sector_tidy)) %>% "
 "0","  mutate(sector_tidy = fct_relevel(sector_tidy,"

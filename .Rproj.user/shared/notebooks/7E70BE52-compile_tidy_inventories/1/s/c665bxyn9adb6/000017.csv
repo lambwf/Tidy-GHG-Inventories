@@ -11,8 +11,8 @@
 "0","  group_by(iso,country) %>% "
 "0","  summarise(year_submission=last(year_submission)) %>% "
 "0","  mutate(file=paste0(country,""_"",year_submission))"
-"2","[38;5;232m`summarise()` has grouped output by 'iso'. You can override using the `.groups` argument.[39m
-"
+"0",""
+"0",""
 "0","## Compile"
 "0",""
 "0","data <- data.frame()"
