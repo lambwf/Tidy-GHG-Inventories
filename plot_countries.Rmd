@@ -1,0 +1,594 @@
+---
+title: "crt_plots"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(maps)
+library(ggalluvial)
+library(ggrepel)
+library(patchwork)
+source("tidy-inventories-scripts.R")
+
+latest_file <- get_latest_version(list.files("data"))
+
+load(latest_file)
+load("sources/data_crt_files.RData")
+load("data/data_feedstocks.RData")
+
+source("https://raw.githubusercontent.com/lambwf/Codebase/main/figure_style.R")
+
+```
+
+```{r plot_sector_summaries, echo=FALSE, fig.height=3.5,fig.width=8}
+
+
+data_plots <- data_crts %>% 
+  left_join(.,read.xlsx("data/cc_inventory_sectors.xlsx",sheet=2) %>% select(sector_code,sector_tidy)) %>% 
+  group_by(country,iso,year,sector_tidy) %>% 
+  summarise(value=sum(value,na.rm=T)/1e6)
+
+data_plots <- data_plots %>% 
+  mutate(sector_tidy = as.factor(sector_tidy)) %>% 
+  mutate(sector_tidy = fct_relevel(sector_tidy,
+                                   "Energy | Power",
+                                   "Energy | Industry",
+                                   "Energy | Transport",
+                                   "Energy | Buildings & other",
+                                   "Energy | Fuel production",
+                                   "Industrial processes",
+                                   "Agriculture",
+                                   "Land use change (LULUCF)",
+                                   "Waste"))
+
+countries = unique(data_plots$country)
+for (i in 1:length(countries)) {
+  
+  data <- data_plots %>% 
+  filter(country == countries[i])
+  
+  total <- data %>% 
+    group_by(year) %>% 
+    summarise(value=sum(value))
+  
+  p <- data %>% 
+  ggplot(.,aes(x=year,y=value,fill=sector_tidy)) +
+  geom_col(color='#252525',linewidth=0.25,width=1) +
+  geom_path(data=total,inherit.aes = FALSE,aes(x=year,y=value),size=1,colour='#252525') +
+  geom_point(data=total,inherit.aes = FALSE,aes(x=year,y=value),size=1.75,shape=21,fill="white",colour='#252525') +
+  theme_wl_bar_trend() + 
+  scale_fill_manual(values=colours_9_sectors) +
+  scale_x_continuous(limits=c(1989,max(data_plots$year)+1),
+                       expand = expansion(mult = c(0.01, 0.01)),
+                     breaks=c(1990,2000,2010,max(data_plots$year))) +
+  theme(axis.title = element_blank()) +
+  labs(title=paste0(countries[i]),
+       subtitle=expression("Greenhouse gas emissions inventory (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ GWP100 AR5   ⌂ CC-BY William F. Lamb")
+
+  
+  ggsave(paste0("plots/countries/sectors/",countries[i],"-sectors.png"), plot = p, device = "png", dpi = 300, width = 8, height = 4)
+  ggsave(paste0("plots/countries/sectors/",countries[i],"-sectors.pdf"), plot = p, device = cairo_pdf, width = 8, height = 4)
+  ggsave(paste0("plots/countries/sectors/",countries[i],"-sectors.svg"), plot = p, device = "svg", width = 8, height = 4)
+
+  data <- data %>% 
+    mutate(units="MtCO2e (GWP100 AR5)") %>% 
+    select(country,iso,sector=sector_tidy,year,units,value)
+  
+  
+  ## Save data
+  
+  wb <- createWorkbook()
+  addWorksheet(wb,"info")
+  addWorksheet(wb,"data")
+  info = data.frame(a=c("Author","Contact","Data sources","See also"),
+                    b=c("William F. Lamb",
+                        "william.lamb@pik-potsdam.de",
+                        "Lamb, W. F. (2025). Tidy GHG Inventories (1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14945466",
+                        "https://doi.org/10.5281/zenodo.14512139"))
+  
+  writeData(wb, sheet = "info",info,colNames = F, rowNames = F)
+  writeData(wb, sheet = "data",data,colNames = T, rowNames = F)
+  
+  saveWorkbook(wb,paste0("plots/countries/sectors/",countries[i],"-sectors.xlsx"),overwrite=T)
+  
+  
+}
+
+
+```
+
+```{r plot_changes, echo=FALSE, fig.height=3.5,fig.width=7}
+
+
+load("sources/data_crt_files.RData")
+
+files <- files_crts %>% 
+  select(iso,country,dir,year_submission) %>% 
+  distinct() %>% 
+  mutate(file=paste0(country,"_",year_submission))
+
+files <- files %>% 
+  group_by(iso) %>% 
+  mutate(no_versions=n()) %>% 
+  filter(no_versions>1)
+
+## Compile
+
+data_compare <- data.frame()
+
+for (i in 1:length(files$file)) {
+  
+  temp_env <- new.env()
+  load(paste0("sources/compiled/",files$file[i],".RData"), envir = temp_env)
+
+  data_compare <- rbind(data_compare,temp_env$data)
+
+}
+
+
+data_plots <- data_compare %>% 
+  group_by(country,iso,year,year_submission) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1e6)
+
+countries = unique(data_plots$country)
+
+
+for (i in 1:length(countries)) {
+  
+  data <- data_plots %>% 
+  filter(country == countries[i])
+  
+  
+  p <- data %>% 
+  ggplot(.,aes(x=year,y=value,colour=year_submission)) +
+  geom_path(size=1) +
+  geom_point(size=1.75,shape=21,fill="white") +
+  theme_wl_bar_trend() + 
+  scale_colour_manual(values=colours_9_qual) +
+  scale_x_continuous(limits=c(1989,max(data_plots$year)+1),
+                       expand = expansion(mult = c(0.01, 0.01)),
+                     breaks=c(1990,2000,2010,max(data_plots$year))) +
+  scale_y_continuous(limits = c(ifelse(any(data$value<0),NA,0), NA)) +
+  
+  theme(axis.title = element_blank()) +
+  labs(title=paste0(countries[i]),
+       subtitle=expression("Greenhouse gas emissions inventory (MtCO"[2]*"e/yr)"),
+       caption="⌂ UNFCCC   ⌂ Tidy GHG inventories   ⌂ GWP100 AR5   ⌂ CC-BY William F. Lamb")
+
+  # p2 <- data %>% 
+  #   group_by(year_submission) %>% 
+  #   summarise(value=last(value)) %>% 
+  # ggplot(.,aes(x=1,y=value,colour=year_submission,label=year_submission)) +
+  # geom_text_repel(
+  #   hjust=0,
+  #   direction = "y",
+  #   point.size = NA,
+  #   size=3.5,
+  #   show.legend = FALSE,
+  #   min.segment.length = Inf,
+  #   box.padding = 0.2,
+  #   force = 0.1) +
+  # scale_colour_manual(values=colours_gases) +
+  # scale_x_continuous(expand = expansion(mult = c(0, 0.05))) +
+  #   scale_y_continuous(limits = c(0, NA)) +
+  # theme_wl_empty()
+  # 
+  # plot <- p1 + p2 + plot_layout(widths=c(5,1.55))
+  # plot
+
+  
+  ggsave(paste0("plots/countries/versions/",countries[i],"-versions.png"), plot = p, device = "png", dpi = 300, width = 7, height = 4)
+  ggsave(paste0("plots/countries/versions/",countries[i],"-versions.pdf"), plot = p, device = cairo_pdf, width = 7, height = 4)
+  ggsave(paste0("plots/countries/versions/",countries[i],"-versions.svg"), plot = p, device = "svg", width = 7, height = 4)
+  
+
+
+  
+}
+
+
+
+```
+
+```{r plot_sankeys, echo=FALSE, fig.height=5.5,fig.width=10}
+
+countries <- files_crts %>% 
+  filter(status_energy=="compiled") %>% 
+  group_by(iso,country) %>% 
+  summarise(year_submission=last(year_submission)) %>% 
+  arrange(iso)
+i=8
+
+data_feedstocks <- data_feedstocks %>% 
+  mutate(country=countrycode(iso,"iso3c","country.name")) %>% 
+  mutate(value=e_co2*1000) %>% 
+  mutate(year=as.numeric(year)) %>% 
+  mutate(gas="co2")
+
+
+for (i in 1:length(countries$iso)) {
+  
+  load(paste0("sources/compiled/",countries$country[i],"_",countries$year_submission[i],".RData"))
+  
+  data_plot <- data %>% 
+    filter(sector_lv1!="Energy") %>% 
+    bind_rows(.,data_energy)
+  
+  data_plot <- data_plot %>% 
+    arrange(across(-value)) %>% 
+    mutate(fuel=ifelse(grepl("oil",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Gaseous fuels",fuel),"Gas",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Gasoline",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Solid fuels",fuel),"Coal",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Jet kerosene",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Aviation gasoline",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Kerosene",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("LPG",fuel),"Gas",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Liquefied petroleum gases",fuel),"Gas",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Liquid fuels",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Other liquid fuels",fuel),"Oil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Other fossil fuels",fuel),"Other fossil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Lubricants",fuel),"Other fossil",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("FAME fossil part",fuel),"Other fossil",fuel))
+  
+  data_plot <- data_plot %>% 
+    arrange(across(-value)) %>% 
+    mutate(fuel=ifelse(grepl("Peat",fuel),"Biofuels",fuel)) %>% 
+    mutate(fuel=ifelse(grepl("Biomass",fuel),"Biofuels",fuel))  %>% 
+    mutate(fuel=ifelse(grepl("Biodiesel",fuel),"Biofuels",fuel))
+  
+  ## allocate fugitive emissions
+  data_plot <- data_plot %>% 
+    mutate(fuel=ifelse(sector_lv3=="Solid fuels","Coal",fuel)) %>% 
+    mutate(fuel=ifelse(sector_lv4=="Oil","Oil",fuel)) %>% 
+    mutate(fuel=ifelse(sector_lv4=="Natural gas","Gas",fuel)) %>% 
+    mutate(fuel=ifelse(sector_lv4=="Venting and flaring","Gas",fuel)) %>% 
+    mutate(fuel=ifelse(sector_lv3=="Oil and natural gas and other emissions from energy production" & sector_lv4=="Other","Other fossil",fuel)) %>% 
+    mutate(fuel=ifelse(sector_lv1!="Energy","Non-fossil",fuel))
+  
+  
+  
+  data_plot <- data_plot %>% 
+    mutate(gas=ifelse(!gas %in% c("co2","ch4","n2o"),"f-gases",gas))
+  
+  data_plot <- data_plot %>% 
+    filter(year==max(data_plot$year)) %>%
+    left_join(.,read.xlsx("data/cc_inventory_sectors.xlsx",sheet=2) %>% select(sector_code,sector_tidy,sector_tidy_order)) %>% 
+    select(country,iso,year,sector_tidy,sector_tidy_order,gas,fuel,value) %>% 
+    group_by(across(-value)) %>% 
+    summarise(value=sum(value,na.rm=T)) %>% 
+    filter(value!=0) %>% 
+    filter(value>0)
+  
+  
+  ## allocate feedstocks
+  data_plot_feedstocks <- data_feedstocks %>% 
+    filter(iso==countries$iso[i],year_submission==countries$year_submission[i],year==max(data_plot$year)) %>% 
+    mutate(sector_tidy="Industrial processes",sector_tidy_order=6) %>% 
+    select(-year_submission,-activity,-e_co2)
+  
+  temp <- data_plot %>% 
+    filter(sector_tidy=="Industrial processes",gas=="co2") %>% 
+    mutate(value=value-sum(data_plot_feedstocks$value,na.rm=T))
+  
+  if (length(temp$value)==0) {
+    print(paste0("WARNING: ignoring ",countries$country[i]," feedstocks because of no data"))
+  } else if (temp$value<0) {
+      print(paste0("WARNING: ignoring ",countries$country[i]," feedstocks because they exceed process emissions"))
+    } else {
+  
+    data_plot <- data_plot %>% 
+      rbind(.,data_plot_feedstocks) %>% 
+      rbind(.,temp)
+    
+  }
+  
+  
+  
+  ## filter out tiny flows
+  data_plot <- data_plot %>% 
+    filter(!is.na(value)) %>% 
+    left_join(.,data_plot %>% group_by(year) %>% summarise(total=sum(value,na.rm=T)),by=join_by(year)) %>% 
+    mutate(share=value/total) %>% 
+    filter(share>=0.002)
+  
+  
+  
+  data_plot$fuel <- as.factor(data_plot$fuel)
+  data_plot$fuel <- fct_relevel(data_plot$fuel,"Coal","Oil","Gas","Other fossil","Biofuels","Non-fossil")
+  
+  
+  data_plot$sector_tidy <- as.factor(data_plot$sector_tidy)
+  data_plot$sector_tidy <- fct_reorder(data_plot$sector_tidy,data_plot$sector_tidy_order)
+  
+  data_plot <- data_plot %>% 
+    mutate(gas=ifelse(gas=="co2","CO2",gas)) %>% 
+    mutate(gas=ifelse(gas=="ch4","CH4",gas)) %>% 
+    mutate(gas=ifelse(gas=="n2o","N2O",gas)) %>% 
+    mutate(gas=ifelse(gas=="f-gases","F-gases",gas))
+  data_plot$gas <- as.factor(data_plot$gas)
+  data_plot$gas <- fct_relevel(data_plot$gas,"CO2","CH4","N2O","F-gases")
+  
+  
+  data_plot_fuel_sector <- data_plot %>% 
+    group_by(fuel, sector_tidy) %>% 
+    summarise(value = sum(value), .groups="drop")
+  data_plot_sector_gas <- data_plot %>% 
+    group_by(sector_tidy, gas) %>% 
+    summarise(value = sum(value), .groups="drop")
+  
+  
+  
+  p1 <- ggplot(data_plot_fuel_sector,aes(axis1 = fuel,axis2 = sector_tidy,y = value)) +
+    scale_x_discrete(expand = c(.1, .1)) +
+    geom_alluvium(aes(fill = fuel), width = 0.2, color="#525252",alpha=0.8) +
+    geom_stratum(width = 0.1, color = "black",fill="grey80") +
+    
+    scale_x_discrete(expand=c(0,0)) +
+    scale_y_continuous(expand=c(0,0)) +
+    scale_fill_manual(values=colours_fuels,na.value = "grey80") +
+    theme_wl_empty() +
+    theme(
+      axis.title = element_blank(),
+      plot.margin = margin(5,0,5,5),
+      legend.position="none",
+      plot.caption = element_text(family = "sans",size = 9,hjust = 0,color = '#bdbdbd',margin = margin(t = 10))
+    ) +
+    labs(title =paste0(unique(data_plot$country)," in ",unique(data_plot$year)),
+         subtitle = "Total gross greenhouse gas emissions by fuel, sector and gas",
+         caption ="⌂ Tidy GHG Inventories    ⌂ Note: GWP100 AR5    ⌂ Note: flows less than 1/500th of total are hidden, removals are excluded")
+  
+  
+  
+  p2 <- ggplot(data_plot_sector_gas,aes(axis1 = sector_tidy,axis2 = gas,y = value)) +
+    scale_x_discrete(expand = c(.1, .1)) +
+    geom_alluvium(aes(fill = gas), width = 0.2, color="#525252",alpha=0.8) +
+    geom_stratum(width = 0.1, color = "black",fill="grey80") +
+    
+    scale_x_discrete(expand=c(0,0)) +
+    scale_y_continuous(expand=c(0,0)) +
+    scale_fill_manual(values=colours_gases,na.value = "grey80") +
+    coord_cartesian()+ 
+    theme_wl_empty() +
+    theme(
+      axis.title = element_blank(),
+      plot.margin = margin(5,0,5,5),
+      legend.position="none"
+    )
+  
+  
+  label_fuel <- data_plot_fuel_sector %>% 
+    group_by(fuel) %>% 
+    summarise(value=sum(value)) %>% 
+    mutate(total=sum(data_plot_fuel_sector$value)) %>% 
+    arrange(desc(fuel)) %>% 
+    mutate(label_position=value) %>%
+    mutate(label_position=cumsum(label_position)) %>% 
+    mutate(label_position=label_position-(value/2))
+  
+  label_fuel <- label_fuel %>% ggplot(.,aes(x=1,y=label_position,label=str_wrap(fuel,15),color=fuel)) +
+    geom_text_repel(nudge_x=-0.5,hjust=1,force = 20,max.iter = 2000,segment.curvature = -0.25,direction="y") +
+    scale_y_continuous(limits=c(0,max(label_fuel$total)),expand=c(0,0)) +
+    scale_color_manual(values=colours_fuels) +
+    theme_wl_empty() +
+    theme(legend.position="none")
+  
+  label_sector <- data_plot_fuel_sector %>% 
+    group_by(sector_tidy) %>% 
+    summarise(value=sum(value)) %>% 
+    mutate(total=sum(data_plot_fuel_sector$value)) %>% 
+    arrange(desc(sector_tidy)) %>% 
+    mutate(label_position=value) %>%
+    mutate(label_position=cumsum(label_position)) %>% 
+    mutate(label_position=label_position-(value/2)) %>%
+    mutate(fraction=label_position/total)
+  
+  label_geom <- if (any(abs(diff(label_sector$fraction)) < 0.02)) {
+    geom_text_repel(
+      aes(label = sector_tidy),
+      direction = "y",
+      force = 0.5,
+      box.padding = 0,
+      point.padding = 0,
+      seed = 1#,
+  #    ylim = c(-Inf, Inf)
+    )
+  } else {
+    geom_text(aes(label = sector_tidy))
+  }
+  
+  
+  label_sector <- label_sector %>% ggplot(.,aes(x=1,y=label_position,label=sector_tidy)) +
+    label_geom +
+    scale_y_continuous(limits=c(0,max(label_sector$total)),expand=c(0,0)) +
+    coord_cartesian(clip="off") +
+    theme_wl_empty()
+  
+  label_gas <- data_plot_sector_gas %>% 
+    group_by(gas) %>% 
+    summarise(value=sum(value)) %>% 
+    mutate(total=sum(data_plot_sector_gas$value)) %>% 
+    arrange(desc(gas)) %>% 
+    mutate(label_position=value) %>%
+    mutate(label_position=cumsum(label_position)) %>% 
+    mutate(label_position=label_position-(value/2))
+  
+  label_gas <- label_gas %>% ggplot(.,aes(x=1,y=label_position,label=gas,color=gas)) +
+    geom_text_repel(nudge_x=0.5,hjust=0,force = 40,max.iter = 2000,segment.curvature = -0.25,direction="y") +
+    scale_y_continuous(limits=c(0,max(label_gas$total)),expand=c(0,0)) +
+    scale_color_manual(values=colours_gases) +
+    theme_wl_empty() +
+    theme(legend.position="none")
+  
+  
+  plot <- label_fuel + p1 + label_sector + p2 + label_gas + plot_layout(widths = c(0.34,1,0.75,1,0.35))
+  plot
+  ggsave(plot,filename = paste0("plots/countries/sankeys/",countries$country[i],"-sankey.png"),device = "png",height = 5.5,width=10,dpi=300)
+  ggsave(plot,filename = paste0("plots/countries/sankeys/",countries$country[i],"-sankey.pdf"),device = cairo_pdf,height = 5.5,width=10)
+  ggsave(plot,filename = paste0("plots/countries/sankeys/",countries$country[i],"-sankey.svg"),device = 'svg',height = 5.5,width=10)
+
+
+}
+
+
+
+
+data_fake <- read.xlsx("../IPCC AR7/sector_sankey.xlsx")
+data_fake$sector_inventory <- as.factor(data_fake$sector_inventory)
+data_fake$sector_inventory <- fct_reorder(data_fake$sector_inventory,data_fake$sector_inventory_order)
+data_fake$sector_ipcc <- as.factor(data_fake$sector_ipcc)
+data_fake$sector_ipcc <- fct_reorder(data_fake$sector_ipcc,data_fake$sector_ipcc_order)
+
+
+
+data_fake %>% 
+  ggplot(.,aes(axis1 = sector_inventory,axis2 = sector_ipcc,y = value)) +
+    scale_x_discrete(expand = c(.1, .1)) +
+    geom_alluvium(aes(fill = fuel), width = 0.2, color="#525252",alpha=0.8) +
+    geom_stratum(width = 0.1, color = "black",fill="grey80") +
+    
+    scale_x_discrete(expand=c(0,0)) +
+    scale_y_continuous(expand=c(0,0)) +
+    scale_fill_manual(values=colours_fuels,na.value = "grey80") +
+    theme_wl_empty() +
+    theme(
+      axis.title = element_blank(),
+      plot.margin = margin(5,0,5,5),
+      legend.position="none",
+      plot.caption = element_text(family = "sans",size = 9,hjust = 0,color = '#bdbdbd',margin = margin(t = 10))
+    ) 
+
+
+```
+
+
+
+```{r map,echo=FALSE,warning=FALSE,dpi=300,fig.height=4}
+
+
+
+## Get map data and clean up iso codes
+
+map <- map_data("world") %>% filter(region!="Antarctica")
+map <- map %>% 
+  left_join(.,map %>% 
+              select(region) %>% 
+              distinct() %>% 
+              mutate(iso=countrycode(region,"country.name","iso3c")),
+            by=join_by(region))
+
+
+## Get a list of countries that have complete inventories
+
+country_list <- data_crts %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value=sum(value,na.rm=T)) %>% 
+  group_by(iso,country) %>% 
+  mutate(n=n())
+
+country_list <- country_list %>% 
+  ungroup() %>% 
+  mutate(coverage=ifelse(n>=33,"Submitted,\ndata from 1990-2022","Submitted,\npartial data up to 2022")) %>% 
+  select(iso,country,n,coverage) %>% 
+  distinct()
+
+
+## Join to map data
+
+map <- map %>% left_join(.,country_list,by=join_by(iso))
+map <- map %>% mutate(coverage=ifelse(is.na(coverage),"Not submitted or\nnon-standard format",coverage))
+
+
+## Fix greenland
+map <- map %>% mutate(coverage=ifelse(region=="Greenland","Submitted,\ndata from 1990-2022",coverage))
+
+
+## Arrange factors, get date
+
+map$coverage <- as.factor(map$coverage)
+map$coverage <- fct_relevel(map$coverage,"Submitted,\ndata from 1990-2022","Submitted,\npartial data up to 2022","Not submitted / non-standard format")
+
+Sys.setlocale("LC_TIME", "en_US.UTF-8")
+current_date <- paste0("Submissions up to ",format(Sys.Date(), "%B %d, %Y"))
+current_date <- str_wrap(current_date,width=20)
+
+## Plot
+
+p <- ggplot() + 
+  geom_polygon(data = map, aes(x=long, y = lat, group=group, fill=coverage),color="#636363",size=0.2,na.rm=T) + 
+  #coord_fixed(1,xlim=c(-120,70),ylim=c(0,70)) +
+  scale_fill_manual(values= c("Submitted,\ndata from 1990-2022"="#7dd396ff",
+                              "Submitted,\npartial data up to 2022"="#659cccff",
+                              "Not submitted or\nnon-standard format"='#818181ff')) +
+  theme_wl_empty() +
+  theme(legend.position = c(0.14, 0.2),
+        panel.border = element_rect(colour = "#636363",fill=NA),
+        legend.title=element_text(size=10),
+        legend.text=element_text(size=8)) +
+  labs(subtitle = paste0("GHG inventory submissions under the latest Biennial Transparency Reports"),
+       caption = "⌂ Data: UNFCCC, Tidy GHG inventories   ⌂ CC-BY William F. Lamb \n",
+       fill=current_date)
+p  
+
+
+ggsave(paste0("plots/map-coverage.png"), plot = p, device = "png", dpi = 300, height = 4)
+ggsave(paste0("plots/map-coverage.pdf"), plot = p, device = cairo_pdf, height = 4)
+ggsave(paste0("plots/map-coverage.svg"), plot = p, device = "svg", height = 4)
+
+## Data file for EGR
+data_map <- map %>% 
+  select(region,iso,coverage) %>% 
+  distinct()
+
+
+## Save data
+
+wb <- createWorkbook()
+addWorksheet(wb,"info")
+addWorksheet(wb,"data")
+info = data.frame(a=c("Author","Contact","Data sources","See also"),
+                  b=c("William F. Lamb",
+                      "william.lamb@pik-potsdam.de","Tidy GHG Inventories v1.3 (https://zenodo.org/records/15673746)","https://lambwf.github.io/UNEP-Gap-Report-2025-Chapter-2/"))
+
+writeData(wb, sheet = "info",info,colNames = F, rowNames = F)
+writeData(wb, sheet = "data",data_map,
+          colNames = T, rowNames = F)
+
+saveWorkbook(wb,paste0("plots/map-data.xlsx"),overwrite=T)
+
+
+
+
+
+## Total countries
+length(country_list$coverage)
+
+## Total complete CRTs
+length(country_list$iso[country_list$coverage=="Submitted,\ndata from 1990-2022"])
+
+## No. LDCs/SIDS with CRTs
+country_list <- country_list %>% 
+  left_join(.,read.csv("https://raw.githubusercontent.com/openclimatedata/countrygroups/refs/heads/main/data/ldc.csv") %>% 
+  select(iso=Code) %>% 
+  mutate(LDC=1))
+
+country_list <- country_list %>% 
+  left_join(.,read.csv("https://raw.githubusercontent.com/openclimatedata/countrygroups/refs/heads/main/data/sids.csv") %>% 
+  select(iso=Code) %>% 
+  mutate(SIDS=1))
+
+country_list <- country_list %>% 
+  mutate(LDCs_SIDS=ifelse(!is.na(LDC),1,NA)) %>% 
+  mutate(LDCs_SIDS=ifelse(!is.na(SIDS),1,LDCs_SIDS))
+
+length(country_list$iso[!is.na(country_list$LDCs_SIDS)])
+
+
+```

@@ -13,6 +13,7 @@ library(tidyverse)
 library(countrycode)
 library(zoo)
 
+version = "2.0"
 ```
 
 
@@ -22,6 +23,7 @@ library(zoo)
 load("sources/data_crt_files.RData")
 
 files <- files_crts %>% 
+  filter(status_summaries=="compiled") %>% 
   select(iso,country,dir,year_submission) %>% 
   distinct()
 
@@ -120,9 +122,6 @@ data_memos <- rbind(data_memos,data_eu_memos)
 
 ``` {r save}
 
-############ version
-version = "1.3"
-
 data_crts <- data
 save(data_crts,data_memos,file=paste0("data/data_crts_v",version,".RData"))
 
@@ -146,7 +145,7 @@ info = data.frame(a=c("Title",
                       "Citation"),
                   b=c(paste0("Tidy GHG Inventories v",version),
                       "William F. Lamb",
-                      "lamb@mcc-berlin.net",
+                      "william.lamb@pik-potsdam.de",
                       "This data file is a compilation of national greenhouse gas emissions (GHG) inventories, sourced from the Common Reporting Tables (CRTs) that countries submit to the UNFCCC. The CRTs themselves require significant manipulation before one can begin any data analysis. The objective of this dataset is therefore to put the national inventories into a tidy, consistent format that better suits user needs. I sourced the original CRT files from the UNFCCC (e.g. https://unfccc.int/ghg-inventories-annex-i-parties/2024; https://unfccc.int/first-biennial-transparency-reports) and reformatted their summary reports into a single tidy, structured data table.",
                       "Emissions are split into sectors as set out by the Intergovernmental Panel on Climate Change (IPCC) Task Force on National Greenhouse Gas Inventories (TFI). The six main sectors are (1) Energy, (2) Industrial processes and product use, (3) Agriculture, (4) Land use, land-use change and forestry, (5) Waste, and (6) Other. A general description of the sectors is available in the TFI guidance. In this data file the first five high level sectors are split into 41 individual categories, which is the most detailed level of reporting provided in the CRT summary sheets. I have included only the data from 'leaf nodes' in the sector hierarchy, which are sectors that have no further child sectors. This means that you can safely sum up all sectors for each country without double counting. The higher level sector categories are provided as variables for convenient aggregation. The 'sector' tab of the spreadsheet shows which sectors are included and how they fit into the TFI hierarchy.",
                       "Countries report certain memo items in their inventories, but do not account these in the totals. Currently they include items like international bunker fuels, military operations and CO2 storage. These can be found in the separate Memo tab. Note that the full hierarchy is included here, so double counting is possible.",
@@ -154,7 +153,7 @@ info = data.frame(a=c("Title",
                       "Currently only Annex I countries consistently submit CRTs each year. Non-Annex I countries submit at irregular intervals, although this may change. Recently there have also been significant delays in submissions as as countries move to the new reporting format. The full list of countries covered and associated files is in the 'countries' tab of the spreadsheet.",
                       paste0(Sys.Date()),
                       "https://github.com/lambwf/Tidy-GHG-Inventories/blob/main/read_crts.Rmd",
-                      paste0("Lamb, W. F. (2024). Tidy GHG Inventories (",version,") [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14576123")))
+                      paste0("Lamb, W. F. (",format(Sys.time(),"%Y"),"). Tidy GHG Inventories (v",version,") [Data set]. Zenodo. https://doi.org/10.5281/zenodo.17192657")))
 
 
 ## rebuild sector hierarchy
@@ -233,7 +232,7 @@ info = data.frame(a=c("Title",
                       "Currently only Annex I countries consistently submit CRTs each year. Non-Annex I countries submit at irregular intervals, although this may change. Recently there have also been significant delays in submissions as as countries move to the new reporting format. The full list of countries covered and associated files is in the 'countries' tab of the spreadsheet.",
                       paste0(Sys.Date()),
                       "https://github.com/lambwf/Tidy-GHG-Inventories/blob/main/read_crts.Rmd",
-                      paste0("Lamb, W. F. (2024). Tidy GHG Inventories (",version,") [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14576123")))
+                      paste0("Lamb, W. F. (",format(Sys.time(),"%Y"),"). Tidy GHG Inventories (v",version,") [Data set]. Zenodo. https://doi.org/10.5281/zenodo.17192657")))
 
 
 
@@ -301,6 +300,57 @@ saveWorkbook(wb_wide,paste0("data/Tidy-GHG-Inventories-v",version,"-wide.xlsx"),
 
 ```
 
+
+
+
+``` {r compare_versions}
+
+current_version <- read.xlsx("data/Tidy-GHG-Inventories-v2.0-long.xlsx",sheet=2)
+last_version <- read.xlsx("data/Tidy-GHG-Inventories-v1.3-long.xlsx",sheet=2)
+
+compare <- current_version %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value_current=sum(value,na.rm=T))
+
+compare <- compare %>% 
+  left_join(.,last_version %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value_last=sum(value,na.rm=T)),by = join_by(iso, country, year))
+
+compare <- compare %>% 
+  mutate(uhoh=ifelse(value_current!=value_last,1,0)) %>% 
+  filter(uhoh==1)
+
+```
+
+
+``` {r compare_PRIMAP,fig.width=8,fig.height=10}
+
+## compare to PRIMAP Hist-CR
+
+data_primap <- read.csv("../GHG-Emissions-Assessment/sources/PRIMAP/Guetschow_et_al_2025-PRIMAP-hist_v2.6.1_final_no_rounding_13-Mar-2025.csv")
+data_primap <- gather(data_primap,year,value,X1750:X2023)
+data_primap$year <- gsub("X","",data_primap$year)
+names(data_primap) <- c("source","scenario","provenance","area","gas","unit","category","year","value") 
+
+data_primap <- data_primap %>% 
+  filter(scenario=="HISTCR") %>% 
+  filter(category %in% c("0")) %>% 
+  filter(gas=="KYOTOGHG (AR4GWP100)") %>% 
+  mutate(year=as.numeric(year)) %>% 
+  mutate(area=ifelse(area=="EU27BX","EU27",area)) %>% 
+  mutate(value=value*1000)
+
+check_primap <- data_crts %>% 
+  group_by(iso,country,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE)) %>% 
+  left_join(.,data_primap %>% select(year,value_primap=value,iso=area))
+  
+check_primap %>% 
+  filter(year==2022) %>% 
+  gather(.,dataset,value,value,value_primap) %>% 
+  ggplot(.,aes(x=value,y=country,color=dataset)) +
+  geom_point()
 
 
 ```

@@ -1,0 +1,643 @@
+---
+title: "compile_crt_energy"
+author: "William F. Lamb"
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls())
+library(openxlsx)
+library(tidyverse)
+library(countrycode)
+library(zoo)
+
+load("sources/data_crt_files.RData")
+load("data/cc_sectors.RData")
+
+## submissions with missing energy tables
+files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="CIV" & year_submission=="2024","excluded",status_energy))
+files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="ISR" & year_submission=="2022","excluded",status_energy))
+files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="THA" & year_submission=="2025","excluded",status_energy))
+files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="JOR" & year_submission=="2025","excluded",status_energy))
+
+
+## new sheets to compile
+new_crt_files <- files_crts %>% filter(status_energy=="notcompiled")
+print(unique(new_crt_files$country))
+
+
+```
+
+```{r extract_data}
+
+data_crt <- data.frame()
+
+for (i in 1:length(new_crt_files$dir)) {
+  
+  ######### Fuel combustion tables
+  
+  ## read tables
+  table_1 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.A(a)s1"),
+                       startRow = 7) %>% 
+    select(sector=1,activity=2,e_co2=7,e_ch4=8,e_n2o=9,cr_co2_fossil=10)
+  
+  table_2 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.A(a)s2"),
+                       startRow = 7) %>% 
+    select(sector=1,activity=2,e_co2=7,e_ch4=8,e_n2o=9,cr_co2_fossil=10)
+  
+  table_3 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.A(a)s3"),
+                       startRow = 7) %>% 
+    select(sector=1,activity=2,e_co2=7,e_ch4=8,e_n2o=9)
+  
+  table_4 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.A(a)s4"),
+                       startRow = 7) %>% 
+    select(sector=1,activity=2,e_co2=7,e_ch4=8,e_n2o=9,cr_co2_fossil=10)
+  
+  table_fuel_combustion <- bind_rows(table_1,table_2,table_3,table_4) %>% 
+    mutate(across(everything(), as.character))
+  
+  ## add activity units
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    mutate(activity_unit="Energy consumption (TJ)") %>% 
+    select(sector,activity_unit,everything())
+  
+  
+  ## remove footnotes
+  table_fuel_combustion <- table_fuel_combustion %>% mutate(remove=ifelse(grepl("Information item",sector),"yes",NA))
+  table_fuel_combustion$remove <- na.locf(table_fuel_combustion$remove,na.rm=FALSE)
+  table_fuel_combustion <- table_fuel_combustion %>%
+    filter(is.na(remove)) %>%
+    select(-remove)
+  
+  
+  ## clean up some funny characters
+  table_fuel_combustion$sector <- gsub('xml:space="preserve">',"",table_fuel_combustion$sector)
+  
+  
+  ## extract sector codes, separate fuels
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    filter(!is.na(sector)) %>% 
+    mutate(fuel = ifelse(str_detect(sector, "^[^0-9]"), sector, NA)) %>% 
+    mutate(sector = ifelse(str_detect(sector, "^[^0-9]"), NA, sector)) %>% 
+    mutate(sector_code=sub("^(\\S+)\\s.*", "\\1", sector))
+  
+  
+  ## remove sector codes that don't start with a number and propagate
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    mutate(sector_code = ifelse(grepl("^[0-9]",sector_code),sector_code,NA)) %>% 
+    mutate(sector_code = na.locf(sector_code))
+  
+  
+  ## add trailing dots to sector codes that don't have them
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    mutate(sector_code = if_else(str_ends(sector_code, "\\.$"), sector_code, paste0(sector_code, ".")))
+  
+  
+  #### if the 1.A.2.g. Other sector doesn't have the fuel split, go to the 5th level and aggregate fuels
+  if (length(table_fuel_combustion$e_co2[table_fuel_combustion$sector_code=="1.A.2.g."]) <3) {
+    
+    other_sector_fix <- table_fuel_combustion %>% 
+      filter(
+        str_starts(sector_code, "1.A.2.g."),
+        str_count(sector_code, "\\.") == 5
+      ) %>% 
+      filter(!is.na(fuel),fuel!="All Other Manufacturing") %>%
+      group_by(fuel) %>% 
+      summarise(activity=sum(as.numeric(activity),na.rm=T),
+                e_co2=sum(as.numeric(e_co2),na.rm=T),
+                e_ch4=sum(as.numeric(e_ch4),na.rm=T),
+                e_n2o=sum(as.numeric(e_n2o),na.rm=T)) %>% 
+      mutate(sector_code="1.A.2.g.")
+    
+    other_sector_fix <- other_sector_fix %>% 
+      bind_rows(other_sector_fix %>% 
+                  mutate(e_co2=ifelse(fuel=="Biomass (3)",0,e_co2)) %>% 
+                  group_by(sector_code) %>% 
+                  summarise(activity=sum(activity),e_co2=sum(e_co2),e_ch4=sum(e_ch4),e_n2o=sum(e_n2o)),.) %>% 
+      mutate(activity=as.character(activity),e_co2=as.character(e_co2),e_ch4=as.character(e_ch4),e_n2o=as.character(e_n2o)) %>% 
+      mutate(activity_unit="Energy consumption (TJ)")
+    
+    
+    table_fuel_combustion <- table_fuel_combustion %>% 
+      filter(!str_starts(sector_code, "1.A.2.g.")) %>% 
+      bind_rows(.,other_sector_fix)
+    
+  }
+  
+  
+  
+  ## join sector convention and trim rows
+  table_fuel_combustion <- left_join(table_fuel_combustion %>% rename(sector_check=sector),cc_sectors,by="sector_code")
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    select(sector,sector_check,sector_code,sector_level,sector_description,fuel,everything()) %>% 
+    filter(!is.na(sector))
+  
+  
+  ## create fuel totals
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    mutate(fuel=ifelse(is.na(fuel),"Total",fuel))
+  
+  
+  ## trim out parent nodes
+  table_fuel_combustion <- table_fuel_combustion %>% 
+    filter(is_leaf==TRUE)
+  
+  
+  
+  ######### Fugitive emissions tables (Table1.B.1, Table1.B.2, Table1.C)
+  
+  ## read tables
+  table_5 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.B.1"),
+                       startRow = 8) %>% 
+    select(sector=1,activity=2,e_ch4=5,e_co2=6,cr_ch4=7,cr_co2_fossil=8) %>% 
+    mutate(across(everything(), as.character))
+  
+  table_6 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.B.2"),
+                       startRow = 8) %>% 
+    select(sector=1,e_co2=8,e_ch4=9,e_n2o=10,cr_co2_fossil=11) %>% 
+    mutate(across(everything(), as.character))
+  
+  table_7 <- read.xlsx(xlsxFile = paste0("sources/done/",new_crt_files$dir[i],"/",new_crt_files$files[i]),
+                       sheet = paste0("Table1.C"),
+                       startRow = 8) %>% 
+    select(sector=1,activity=2,e_co2=4) %>% 
+    mutate(across(everything(), as.character))
+  
+  
+  table_fugitive <- bind_rows(table_5,table_6,table_7)
+  
+  ## clean sector codes
+  table_fugitive <- table_fugitive %>% 
+    mutate(sector_code = sub("^(.*?)(?=[A-Za-z]{4,}).*", "\\1", sector, perl = TRUE)) %>% 
+    mutate(sector_code = str_replace_all(sector_code, "\\.\\s+", ".")) %>% 
+    mutate(sector_code=if_else(str_starts(sector_code, "1.B.") | str_starts(sector_code, "1.C."),sector_code,NA)) %>% 
+    mutate(sector_code = str_replace(sector_code, "Oil", "")) %>% 
+    mutate(sector_code = str_replace(sector_code, "Gas", "")) %>% 
+    mutate(sector_code = str_remove_all(sector_code, "\\s*\\(.*?\\)")) %>% 
+    mutate(sector_code = str_trim(sector_code, side = "right")) %>% 
+    select(sector,sector_code,everything())
+  
+  
+  ## join sector convention, add activity units to coal, and trim rows
+  table_fugitive <- left_join(table_fugitive %>% rename(sector_check=sector),cc_sectors,by="sector_code") 
+  table_fugitive <- table_fugitive %>%  
+    mutate(activity_unit=ifelse(str_starts(sector_code,"1.B.1"),"Fuel produced (Mt)",NA)) %>% 
+    select(sector,sector_check,sector_code,sector_level,sector_description,activity_unit,activity,everything()) %>% 
+    filter(!is.na(sector))
+  
+  
+  
+  ## join everything
+  table <- bind_rows(table_fuel_combustion,table_fugitive) %>% 
+    select(-sector_check)
+  
+  
+  ## deal with NA, NO, IE, NE and convert to numeric
+  table <- table %>% 
+    mutate(across(c(activity,e_co2,e_ch4,e_n2o,cr_co2_fossil,cr_ch4),
+                  ~ if_else(.x == "NO", "0", .x))) %>% 
+    mutate(across(c(activity,e_co2,e_ch4,e_n2o,cr_co2_fossil,cr_ch4),
+                  ~ if_else(str_detect(.x, "\\b(NA|NE|NO|IE|C)(,\\b(NA|NE|NO|IE|C))*\\b"), NA_character_, .x))) %>% 
+    mutate(across(c(activity,e_co2,e_ch4,e_n2o,cr_co2_fossil,cr_ch4), as.numeric))
+  
+  
+  ## join country and year
+  table <- table %>% 
+    mutate(country=new_crt_files$country[i]) %>% 
+    mutate(iso=new_crt_files$iso[i]) %>% 
+    mutate(dir=new_crt_files$dir[i]) %>% 
+    mutate(year_submission=new_crt_files$year_submission[i]) %>% 
+    mutate(year=new_crt_files$year_file[i])
+  
+  
+  ## organise and join
+  table <- table %>% 
+    select(country,iso,dir,year_submission,year,everything()) 
+  
+  
+  data_crt <- bind_rows(data_crt,table)
+  
+}
+
+
+```
+
+``` {r clean}
+
+data_crts_energy <- data_crt %>% 
+  ungroup() %>% 
+  distinct()
+
+## flag duplicate rows 
+## sometimes these are simply subsectors that have been allocated 50% each of some category - thats ok
+## in other cases, duplicate rows indicate double counting of two levels in the hierarchy - not ok
+
+data_crts_energy <- data_crts_energy %>%
+  mutate(duplicate = duplicated(across(c(year_submission,sector_code, activity, year, e_co2, e_ch4, e_n2o)))) %>% 
+  mutate(duplicate = ifelse(fuel=="Total",NA,duplicate))
+
+
+## gather emission variables
+data_crts_energy <- data_crts_energy %>% 
+  ungroup() %>%
+  select(-activity,-cr_co2_fossil,-cr_ch4) %>% 
+  gather(.,gas,value,e_co2,e_ch4,e_n2o) %>% 
+  mutate(gas = str_remove(gas, "^e_"))
+
+
+## clean structure and arrange
+data_crts_energy <- data_crts_energy %>% 
+  select(country,iso,dir,year_submission,sector_code,sector_level,sector_lv1,sector_lv2,sector_lv3,sector_lv4,,year,gas,fuel,value,duplicate) %>% 
+  arrange(across(-c(value,duplicate))) %>% 
+  filter(!is.na(value))
+
+
+## set biomass co2 to 0, as it doesn't get counted in totals
+data_crts_energy <- data_crts_energy %>% 
+  mutate(value = ifelse(grepl("Biomass", fuel) & gas == "co2", 0, value)) %>% 
+  mutate(value = ifelse(grepl("Biodiesel", fuel) & gas == "co2", 0, value))
+
+
+## remove rows with 0s
+data_crts_energy <- data_crts_energy %>% 
+  filter(value!=0)
+
+
+## check if the fuels sum to the totals
+
+check_totals <- function(data_crts_energy) {
+  
+  check_totals <- data_crts_energy %>%
+    ungroup() %>% 
+    filter(fuel!="Total") %>% 
+    group_by(across(-c(fuel,value,duplicate))) %>% 
+    summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
+    left_join(.,data_crts_energy %>% filter(fuel=="Total") %>% rename(total=value) %>% select(-fuel,-duplicate),
+              by = join_by(country, iso, dir, year_submission, sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3, sector_lv4, year, gas))
+  
+  check_totals <- check_totals %>% 
+    mutate(diff=value-total) %>% 
+    arrange(diff) %>% 
+    mutate(rel_diff=diff/total) %>% 
+    filter(abs(rel_diff)>1e-6) %>% 
+    select(country,iso,dir,year_submission,year,sector_code,sector_level,gas,diff)
+  
+  return(check_totals)
+  
+  
+}
+
+
+## if there is an other category and a flag and it equals the difference, remove it
+
+data_crts_energy <- data_crts_energy %>%  
+  left_join(.,check_totals(data_crts_energy),
+            by = join_by(country, iso, dir, year_submission, sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3, sector_lv4, year, gas)) %>% 
+  mutate(remove=ifelse(!is.na(diff) & grepl("Other",fuel) & round(value,3)==round(diff,3),1,0)) %>%
+  ## check if there are more than 1 instance per grouping
+  group_by(country,iso,dir,sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3, sector_lv4, year, gas) %>% 
+  mutate(check=sum(remove)) %>%
+  ungroup() %>% 
+  mutate(remove=ifelse(check>1,0,remove)) %>% 
+  filter(remove==0)
+
+data_crts_energy <- data_crts_energy %>% 
+  select(-diff,-remove,-check)
+
+
+## if single rows can explain all of the difference, remove them
+
+data_crts_energy <- data_crts_energy %>%
+  ungroup() %>% 
+  left_join(.,check_totals(data_crts_energy),
+            by = join_by(country, iso, dir, year_submission, sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3, sector_lv4, year, gas)) %>% 
+  mutate(remove=ifelse(round(value,3)==round(diff,3) & fuel!="Total",1,NA)) %>%
+  group_by(iso,sector_code,year,gas,year_submission) %>% 
+  mutate(remove=cumsum(remove)) %>% 
+  ungroup() %>% 
+  mutate(remove=ifelse(is.na(remove),0,remove)) %>% 
+  mutate(value=ifelse(remove==2,0,value)) %>% 
+  filter(remove!=2)
+
+data_crts_energy <- data_crts_energy %>% 
+  arrange(country,iso,dir,year_submission,year,sector_code,sector_level,gas,fuel) %>% 
+  select(-diff,-remove)
+
+
+## if there is a difference AND a duplicate row has been flagged, remove that row
+
+data_crts_energy <- data_crts_energy %>%  
+  left_join(.,check_totals(data_crts_energy),
+            by = join_by(country, iso, dir, year_submission, sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3, sector_lv4, year, gas)) %>% 
+  mutate(remove=ifelse(!is.na(diff) & duplicate==TRUE & fuel!="Total",1,0)) %>% 
+  filter(remove==0) 
+
+data_crts_energy <- data_crts_energy %>% 
+  select(-diff,-remove)
+
+
+check_total <- check_totals(data_crts_energy)
+if (length(check_total!=0)) {
+  
+  
+  debug <- data_crts_energy %>%  
+    left_join(.,check_totals(data_crts_energy),
+              by = join_by(country, iso, dir, year_submission, sector_code, sector_level, sector_lv1, sector_lv2, sector_lv3, sector_lv4, year, gas)) #
+  
+  stop("WARNING: still some totals not adding up")
+  
+}
+
+
+```
+
+``` {r gwps}
+
+## Fix sector names to be consistent with the summary sheets
+
+data_crts_energy <- data_crts_energy %>% 
+  mutate(sector_lv2=ifelse(sector_lv2=="Fuel combustion activities","Fuel combustion",sector_lv2))
+
+
+## join AR5 GWPs and convert to tons
+gwps <- read.csv("https://raw.githubusercontent.com/openclimatedata/globalwarmingpotentials/main/globalwarmingpotentials.csv",skip = 10) %>% select(gas=Species,gwp100_ar5=AR5GWP100) %>% mutate(gas=tolower(gas))
+
+data_crts_energy <- data_crts_energy %>% left_join(.,gwps,by="gas")
+
+data_crts_energy <- data_crts_energy %>%
+  mutate(gwp100_ar5=ifelse(!gas %in% c("ch4","n2o"),1,gwp100_ar5)) %>%
+  mutate(value_gwp100=value*gwp100_ar5)
+
+
+data_crts_energy <- data_crts_energy %>%
+  mutate(units="tCO2e (GWP100 AR5)") %>%
+  select(-gwp100_ar5,-value) %>%
+  rename(value=value_gwp100) %>% 
+  mutate(value=value*1000)
+
+
+## harmonise fuel names & double check
+
+data_crts_energy$fuel <- gsub(" \\(\\d+\\) ?", "", data_crts_energy$fuel)
+data_crts_energy$fuel <- gsub(" \\([^)]+\\) ?", "", data_crts_energy$fuel)
+check_fuels <- data_crts_energy %>% filter(is.na(fuel) & sector_lv2=="Fuel combustion")
+if (length(check_fuels!=0)) {stop("WARNING: empty fuel variables")}
+
+
+## tidy up file
+data_crts_energy <- data_crts_energy %>%
+  select(country,iso,dir,year_submission,sector_code,sector_level,sector_lv1,sector_lv2,sector_lv3,sector_lv4,gas,fuel,units,year,value) %>% 
+  mutate(year=as.numeric(year))
+data_crts_energy <- data_crts_energy %>% arrange(across(-ncol(data_crts_energy)))
+
+
+
+
+```
+
+
+``` {r exceptions}
+
+## do some manual checks of the CRTs if the subsequent chunk throws up errors
+
+## 
+files_crts <- files_crts %>%
+  mutate(notes_energy=ifelse(iso=="CAN" & year_submission=="2024","Trivial differences ignored",notes_energy)) %>%
+  mutate(notes_energy=ifelse(iso=="CAN" & year_submission=="2025","Trivial differences ignored",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="LUX" & year_submission=="2024","Trivial differences ignored",notes_energy)) %>%
+  mutate(notes_energy=ifelse(iso=="LUX" & year_submission=="2025","Trivial differences ignored",notes_energy)) %>%
+  mutate(notes_energy=ifelse(iso=="CHL" & year_submission=="2024","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="GHA" & year_submission=="2024","Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="SWE" & year_submission=="2025","Residual added to energy sheets (difference between summary and underlying sheets, reason is confidential data); Trivial differences ignored",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="SWE" & year_submission=="2024","Trivial differences ignored",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="SLB" & year_submission=="2025","Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy))
+  
+
+
+####
+
+
+```
+
+
+``` {r cross-check-and-save-summaries}
+
+
+## then check sectors sum to summary sheets
+just_files <- new_crt_files %>% 
+  select(country,iso,year_submission,dir) %>% 
+  distinct() %>% 
+  left_join(.,files_crts %>% select(dir,notes_energy,status_energy) %>% distinct(),by = join_by(dir)) %>% 
+  filter(status_energy=="notcompiled") %>% 
+  filter(!iso %in% c("PER","KOR","CAN"))
+i=1
+
+## for each CRT, load up the existing summary sheet
+## check that totals sum to hierarchy lv3
+## check also hierarch lv1, to be sure
+## remove totals, keep only fuels
+## save data into file
+
+for (i in 1:length(just_files$year_submission)) {
+  
+  file_name <- paste0(just_files$country[i],"_",just_files$year_submission[i],".RData")
+  load(paste0("sources/compiled/",file_name))
+  
+  data_energy <- data_crts_energy %>% 
+    filter(country==just_files$country[i]) %>% 
+    filter(year_submission==just_files$year_submission[i])
+  
+  
+  ###### infill missing n2o from solid fuels
+  
+  data_infill <- data %>% 
+    filter(sector_lv3=="Solid fuels",gas=="n2o") %>% 
+    mutate(sector_lv4="Coal mining and handling") %>% 
+    mutate(fuel=NA)
+  
+  data_energy <- data_energy %>% 
+    rbind(.,data_infill)
+  
+  
+  ###### infill mysteriously missing data in underlying sheets
+  
+  if (grepl("Residual added to energy sheets", just_files$notes_energy[i])) {
+    
+    data_compare <- data_energy %>%
+      filter(is.na(fuel) | fuel!="Total") %>%
+      select(-sector_lv4,-sector_code,-fuel,-sector_level) %>%
+      group_by(across(-value)) %>%
+      summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>%
+      ungroup()
+
+    data_compare <- data %>%
+      left_join(.,data_compare %>% rename(value_check=value),by = join_by(country, iso, dir, year_submission, sector_lv1, sector_lv2, sector_lv3, gas, units, year)) %>%
+      mutate(check=value-value_check) %>%
+      filter(round(check,1)!=0) 
+    
+    data_compare <- data_compare %>% 
+      mutate(sector_lv4="Residual") %>%
+      mutate(fuel=NA) %>% 
+      mutate(fuel=ifelse(sector_lv2=="Fuel combustion","Other fossil fuels",fuel)) %>% 
+      mutate(value=check) %>% 
+      select(-check,-value_check)
+  
+    data_energy <- data_energy %>% 
+      rbind(.,data_compare)
+    
+  }
+    
+  
+  
+  ## sum energy data to lv1 and check
+  
+  data_compare <- data_energy %>%
+    filter(is.na(fuel) | fuel!="Total") %>% 
+    group_by(sector_lv1,gas,year) %>% 
+    summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
+    ungroup()
+  
+  data_compare <- data %>% 
+    group_by(sector_lv1,gas,year) %>% 
+    summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
+    left_join(.,data_compare %>% rename(value_check=value)) %>% 
+    mutate(check=value-value_check) %>% 
+    filter(round(check,5)!=0)
+  
+  
+  ## sum energy data to lv2 and check
+  # 
+  # data_compare <- data_energy %>%
+  #   filter(is.na(fuel) | fuel!="Total") %>% 
+  #   group_by(sector_lv2,gas,year) %>% 
+  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
+  #   ungroup()
+  # 
+  # data_compare <- data %>% 
+  #   group_by(sector_lv2,gas,year) %>% 
+  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
+  #   left_join(.,data_compare %>% rename(value_check=value)) %>% 
+  #   mutate(check=value-value_check) %>% 
+  #   filter(round(check,5)!=0)
+  
+  
+  
+
+  # sum energy data to lv3 and check
+
+  # data_compare <- data_energy %>%
+  #   filter(is.na(fuel) | fuel!="Total") %>%
+  #   select(-sector_lv4,-sector_code,-fuel,-sector_level) %>%
+  #   group_by(across(-value)) %>%
+  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>%
+  #   ungroup()
+  # 
+  # data_compare <- data %>%
+  #   left_join(.,data_compare %>% rename(value_check=value),by = join_by(country, iso, dir, year_submission, sector_lv1, sector_lv2, sector_lv3, gas, units, year)) %>%
+  #   mutate(check=value-value_check) %>%
+  #   filter(round(check,5)!=0)
+  
+  
+  
+  if (length(data_compare!=0) && !grepl("Trivial differences ignored",just_files$notes_energy[i])) {
+    print(paste0("WARNING: numbers for ",just_files$country[i],"_",just_files$year_submission[i]," don't add up!"))}
+  else if (just_files$status_energy[i]!="excluded") {
+    
+    data_energy <- data_energy %>% filter(is.na(fuel) | fuel!="Total")
+    save(data,data_memos,data_energy,file=paste0("sources/compiled/",file_name))
+    files_crts <- files_crts %>% 
+      mutate(status_energy=ifelse(dir==just_files$dir[i],"compiled",status_energy))
+    save(files_crts,file="sources/data_crt_files.RData")
+    
+  }
+  
+}
+
+
+```
+
+``` {r something}
+
+
+## remove years with only NA data (e.g. China 1990)
+# 
+# data <- data %>% 
+#   group_by(iso,year) %>% 
+#   mutate(year_total=sum(value,na.rm=T)) %>% 
+#   ungroup()
+# 
+# warning <- data %>% 
+#   filter(year_total==0) %>% 
+#   select(country,year) %>% 
+#   distinct()
+# 
+# if (length(warning$country) > 0) {
+#   for (i in 1:length(warning$country)) {
+#     print(paste0("Warning: ",warning$country[i]," in year ",warning$year[i]," removed due to null values"))
+#   }
+# }
+# 
+# 
+# data <- data %>% 
+#   filter(year_total!=0) %>% 
+#   select(-year_total)
+# 
+
+
+
+################### TO DO ONCE MERGED
+## set levels and arrange 
+# data_energy <- data_energy %>%
+#   mutate(gas=as.factor(gas)) %>%
+#   mutate(gas=fct_relevel(gas,"co2","ch4","n2o","hfcs","pfcs","nf3","sf6","hfcs/pfcs (unspecified)"))
+
+
+
+
+
+
+```
+
+
+``` {r save}
+# 
+# data_crts <- data
+# data_crts_memos <- data_memos
+# 
+# ## Save individual files for each CRT
+# 
+# for (i in 1:length(files_to_extract$dir)) {
+#   
+#   file_name <- paste0(files_to_extract$country[i],"_",files_to_extract$year_submission[i])
+#   
+#   data <- data_crts %>% filter(dir==files_to_extract$dir[i]) 
+#   data_memos <- data_crts_memos %>% filter(dir==files_to_extract$dir[i])
+#   
+#   save(data,data_memos,file=paste0("sources/compiled/",file_name,".RData"))
+#   
+# }
+
+
+
+
+## update file structure
+# load("sources/data_crt_files.RData")
+# 
+# 
+# 
+# files_crts <- rbind(files_crts,new_crt_files %>%
+#                       mutate(status_summaries="compiled"))
+
+
+
+
+
+```

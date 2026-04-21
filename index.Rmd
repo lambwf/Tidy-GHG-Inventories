@@ -201,11 +201,12 @@ The following figures summarise the available data for nine inventory sectors. M
 
 ```{r, results='asis'}
 
-filenames <- list.files("plots/countries/", pattern="*.svg", full.names=TRUE)
+filenames <- list.files("plots/countries/sectors/", pattern="*.svg", full.names=TRUE)
 
 for (file in filenames) {
   
-  country <- sub(".*/(.*)\\.svg", "\\1", file)
+  country <- sub(".*/(.*)\\-sectors.svg", "\\1", file)
+  plot <- sub(".*/(.*)\\-sectors.png", "\\1", file)
   
   link_data <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/plot data/", country, ".xlsx'>data</a>")
   
@@ -220,14 +221,13 @@ for (file in filenames) {
   svg_content <- paste(svg_content, collapse = "\n")
   
   cat("<div class='figure-container'>")
-  cat(svg_content)
-  cat(paste0("<div class='figure-text'>", link_data, " | ", link_png, " | ", link_pdf, " | ", link_svg, "</div>"))
+  cat(paste0("<img src='", file, "' alt='", plot, "' />"))
+  #cat(svg_content)
+  cat(paste0("<div class='figure-text'>", country, " | ", link_data, " | ", link_png, " | ", link_pdf, " | ", link_svg, "</div>"))
   cat("</div>")
   
-  # cat("<div class='figure-container'>")
-  # cat(paste0("<img src='", file, "' alt='", country, "' />"))
-  # cat(paste0("<div class='figure-text'>", link_data, " | ", link_png, " | ", link_pdf, "</div>"))
-  # cat("</div>")
+  
+   
   
 }
 

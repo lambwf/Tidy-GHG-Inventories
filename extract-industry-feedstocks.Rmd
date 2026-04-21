@@ -1,0 +1,92 @@
+---
+title: "extract-forest-land"
+author: "William F. Lamb"
+date: "2025-05-28"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+knitr::opts_chunk$set(echo = FALSE)
+
+rm(list=ls())
+library(tidyverse)
+library(openxlsx)
+
+load("sources/data_crt_files.RData")
+
+
+```
+
+```{r extract}
+
+data_feedstocks <- data.frame()
+
+
+
+for (i in 1:length(files_crts$dir)) {
+  
+  table <- read.xlsx(xlsxFile = paste0("sources/done/",files_crts$dir[i],"/",files_crts$files[i]),
+                       sheet = paste0("Table1.A(d)"),
+                       startRow = 8) %>%  
+    select(fuel=1,activity=4,e_co2=8)
+  
+  
+  table <- table %>% 
+    filter(fuel %in% c("Liquid fossil totals","Solid fossil totals","Gaseous fossil totals","Other fossil fuels totals","Total"))
+  
+  
+  
+  ## deal with NA, NO, IE, NE and convert to numeric
+  table <- table %>% 
+    mutate(across(c(activity,e_co2),
+                  ~ if_else(.x == "NO", "0", .x))) %>% 
+    mutate(across(c(activity,e_co2),
+                  ~ if_else(str_detect(.x, "\\b(NA|NE|NO|IE|C)(,\\b(NA|NE|NO|IE|C))*\\b"), NA_character_, .x))) %>% 
+    mutate(across(c(activity,e_co2), as.numeric))
+  
+  
+  table <- table %>% 
+    mutate(year=files_crts$year_file[i]) %>% 
+    mutate(year_submission=files_crts$year_submission[i]) %>% 
+    mutate(iso=files_crts$iso[i])
+  
+  table <- table %>% 
+    select(iso,year_submission,year,everything())
+  
+  ## bind to dataset
+  data_feedstocks <- bind_rows(data_feedstocks,table)
+  
+}
+  
+  
+```
+
+``` {r checks}
+
+data_feedstocks <- data_feedstocks %>% distinct()
+
+## make sure categories sum to the total
+
+check <- data_feedstocks %>% 
+  left_join(.,data_feedstocks %>% filter(fuel=="Total") %>% mutate(total=e_co2)) %>% 
+  mutate(check=total-e_co2) %>% 
+  mutate(uhoh=ifelse(round(check,4)!=0,1,0)) %>% 
+  filter(check==1)
+  
+##
+
+data_feedstocks <- data_feedstocks %>% 
+  filter(fuel!="Total") %>% 
+  mutate(fuel=ifelse(fuel=="Liquid fossil totals","Oil",fuel)) %>% 
+  mutate(fuel=ifelse(fuel=="Solid fossil totals","Coal",fuel)) %>% 
+  mutate(fuel=ifelse(fuel=="Gaseous fossil totals","Gas",fuel)) %>% 
+  mutate(fuel=ifelse(fuel=="Other fossil fuels totals","Other fossil",fuel))
+
+
+save(data_feedstocks,file="data/data_feedstocks.RData")
+  
+  
+
+```
+

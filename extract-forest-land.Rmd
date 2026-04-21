@@ -71,3 +71,14 @@ save(data_land_area,file="data/data_land_area_v1.2.RData")
   
 ```
 
+``` {r any_changes?}
+
+change <- data_land_area %>% 
+  spread(.,year_submission,value) %>%
+  mutate(`2025`=as.numeric(`2025`),`2024`=as.numeric(`2024`)) %>% 
+  mutate(difference=`2025`-`2024`)
+
+
+
+```
+
