@@ -192,7 +192,7 @@ Not all countries submit complete or timely inventories. Some inventories includ
 
 
 <p>
-The following figures summarise the available data for nine inventory sectors. Many more sectors are available in the dataset, as well as memo items that are usually not counted in national totals. Please cite the figures or data as follows: Lamb, W. F. (2025). Tidy GHG Inventories (1.3) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14512139
+The following figures summarise the available data for nine inventory sectors. Many more sectors are available in the dataset, as well as memo items that are usually not counted in national totals. Please cite the figures or data as follows: Lamb, W. F. (2026). Tidy GHG Inventories (v2) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14512139
 </p>
 </div>
 
@@ -208,13 +208,13 @@ for (file in filenames) {
   country <- sub(".*/(.*)\\-sectors.svg", "\\1", file)
   plot <- sub(".*/(.*)\\-sectors.png", "\\1", file)
   
-  link_data <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/plot data/", country, ".xlsx'>data</a>")
+  link_data <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".xlsx'>data</a>")
   
-  link_png <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/", country, ".png'>png</a>")
+  link_png <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".png'>png</a>")
   
-  link_pdf <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/", country, ".pdf'>pdf</a>")
+  link_pdf <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".pdf'>pdf</a>")
   
-  link_svg <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/", country, ".svg'>svg</a>")
+  link_svg <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".svg'>svg</a>")
   
   # --- Read and embed SVG inline ---
   svg_content <- readLines(file, warn = FALSE)
@@ -226,8 +226,6 @@ for (file in filenames) {
   cat(paste0("<div class='figure-text'>", country, " | ", link_data, " | ", link_png, " | ", link_pdf, " | ", link_svg, "</div>"))
   cat("</div>")
   
-  
-   
   
 }
 

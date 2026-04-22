@@ -87,11 +87,10 @@ for (i in 1:length(countries)) {
   wb <- createWorkbook()
   addWorksheet(wb,"info")
   addWorksheet(wb,"data")
-  info = data.frame(a=c("Author","Contact","Data sources","See also"),
+  info = data.frame(a=c("Author","Contact","Data sources"),
                     b=c("William F. Lamb",
                         "william.lamb@pik-potsdam.de",
-                        "Lamb, W. F. (2025). Tidy GHG Inventories (1.0) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14945466",
-                        "https://doi.org/10.5281/zenodo.14512139"))
+                        "Lamb, W. F. (2026). Tidy GHG Inventories (v2) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14512139"))
   
   writeData(wb, sheet = "info",info,colNames = F, rowNames = F)
   writeData(wb, sheet = "data",data,colNames = T, rowNames = F)

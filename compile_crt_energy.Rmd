@@ -16,11 +16,15 @@ library(zoo)
 load("sources/data_crt_files.RData")
 load("data/cc_sectors.RData")
 
-## submissions with missing energy tables
+## excluded submissions with missing or unusual energy tables
+files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="ARE" & year_submission=="2024","excluded",status_energy)) # missing 1B sheets
 files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="CIV" & year_submission=="2024","excluded",status_energy))
 files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="ISR" & year_submission=="2022","excluded",status_energy))
 files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="THA" & year_submission=="2025","excluded",status_energy))
 files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="JOR" & year_submission=="2025","excluded",status_energy))
+files_crts <- files_crts  %>% mutate(status_energy=ifelse(iso=="PER" & year_submission=="2025","excluded",status_energy)) #all biomass co2 emissions were included in totals!
+
+# included submissions with very minor differences in totals
 
 
 ## new sheets to compile
@@ -263,7 +267,8 @@ data_crts_energy <- data_crts_energy %>%
 ## set biomass co2 to 0, as it doesn't get counted in totals
 data_crts_energy <- data_crts_energy %>% 
   mutate(value = ifelse(grepl("Biomass", fuel) & gas == "co2", 0, value)) %>% 
-  mutate(value = ifelse(grepl("Biodiesel", fuel) & gas == "co2", 0, value))
+  mutate(value = ifelse(grepl("Biodiesel", fuel) & !grepl("fossil", fuel, ignore.case = TRUE) & gas == "co2", 0, value))
+  #mutate(value = ifelse(grepl("Biodiesel", fuel) & gas == "co2", 0, value))
 
 
 ## remove rows with 0s
@@ -285,8 +290,9 @@ check_totals <- function(data_crts_energy) {
   
   check_totals <- check_totals %>% 
     mutate(diff=value-total) %>% 
-    arrange(diff) %>% 
+    arrange(diff) %>%
     mutate(rel_diff=diff/total) %>% 
+    filter(round(diff,6)!=0) %>% 
     filter(abs(rel_diff)>1e-6) %>% 
     select(country,iso,dir,year_submission,year,sector_code,sector_level,gas,diff)
   
@@ -417,8 +423,12 @@ files_crts <- files_crts %>%
   mutate(notes_energy=ifelse(iso=="CHL" & year_submission=="2024","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
   mutate(notes_energy=ifelse(iso=="GHA" & year_submission=="2024","Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
   mutate(notes_energy=ifelse(iso=="SWE" & year_submission=="2025","Residual added to energy sheets (difference between summary and underlying sheets, reason is confidential data); Trivial differences ignored",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="SWE" & year_submission=="2026","Residual added to energy sheets (difference between summary and underlying sheets, reason is confidential data); Trivial differences ignored",notes_energy)) %>% 
   mutate(notes_energy=ifelse(iso=="SWE" & year_submission=="2024","Trivial differences ignored",notes_energy)) %>% 
-  mutate(notes_energy=ifelse(iso=="SLB" & year_submission=="2025","Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy))
+  mutate(notes_energy=ifelse(iso=="SLB" & year_submission=="2025","Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="KOR" & year_submission=="2024","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="CHE" & year_submission=="2026","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy))  %>% 
+  mutate(notes_energy=ifelse(iso=="LUX" & year_submission=="2026","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) 
   
 
 
@@ -436,8 +446,7 @@ just_files <- new_crt_files %>%
   select(country,iso,year_submission,dir) %>% 
   distinct() %>% 
   left_join(.,files_crts %>% select(dir,notes_energy,status_energy) %>% distinct(),by = join_by(dir)) %>% 
-  filter(status_energy=="notcompiled") %>% 
-  filter(!iso %in% c("PER","KOR","CAN"))
+  filter(status_energy=="notcompiled")
 i=1
 
 ## for each CRT, load up the existing summary sheet
@@ -445,6 +454,7 @@ i=1
 ## check also hierarch lv1, to be sure
 ## remove totals, keep only fuels
 ## save data into file
+
 
 for (i in 1:length(just_files$year_submission)) {
   
@@ -513,23 +523,23 @@ for (i in 1:length(just_files$year_submission)) {
     filter(round(check,5)!=0)
   
   
-  ## sum energy data to lv2 and check
-  # 
+  # sum energy data to lv2 and check
+
   # data_compare <- data_energy %>%
-  #   filter(is.na(fuel) | fuel!="Total") %>% 
-  #   group_by(sector_lv2,gas,year) %>% 
-  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
+  #   filter(is.na(fuel) | fuel!="Total") %>%
+  #   group_by(sector_lv2,gas,year) %>%
+  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>%
   #   ungroup()
-  # 
-  # data_compare <- data %>% 
-  #   group_by(sector_lv2,gas,year) %>% 
-  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>% 
-  #   left_join(.,data_compare %>% rename(value_check=value)) %>% 
-  #   mutate(check=value-value_check) %>% 
+  #
+  # data_compare <- data %>%
+  #   group_by(sector_lv2,gas,year) %>%
+  #   summarise(value=sum(value,na.rm=T),.groups = "drop_last") %>%
+  #   left_join(.,data_compare %>% rename(value_check=value)) %>%
+  #   mutate(check=value-value_check) %>%
   #   filter(round(check,5)!=0)
-  
-  
-  
+
+
+
 
   # sum energy data to lv3 and check
 
@@ -560,84 +570,6 @@ for (i in 1:length(just_files$year_submission)) {
   }
   
 }
-
-
-```
-
-``` {r something}
-
-
-## remove years with only NA data (e.g. China 1990)
-# 
-# data <- data %>% 
-#   group_by(iso,year) %>% 
-#   mutate(year_total=sum(value,na.rm=T)) %>% 
-#   ungroup()
-# 
-# warning <- data %>% 
-#   filter(year_total==0) %>% 
-#   select(country,year) %>% 
-#   distinct()
-# 
-# if (length(warning$country) > 0) {
-#   for (i in 1:length(warning$country)) {
-#     print(paste0("Warning: ",warning$country[i]," in year ",warning$year[i]," removed due to null values"))
-#   }
-# }
-# 
-# 
-# data <- data %>% 
-#   filter(year_total!=0) %>% 
-#   select(-year_total)
-# 
-
-
-
-################### TO DO ONCE MERGED
-## set levels and arrange 
-# data_energy <- data_energy %>%
-#   mutate(gas=as.factor(gas)) %>%
-#   mutate(gas=fct_relevel(gas,"co2","ch4","n2o","hfcs","pfcs","nf3","sf6","hfcs/pfcs (unspecified)"))
-
-
-
-
-
-
-```
-
-
-``` {r save}
-# 
-# data_crts <- data
-# data_crts_memos <- data_memos
-# 
-# ## Save individual files for each CRT
-# 
-# for (i in 1:length(files_to_extract$dir)) {
-#   
-#   file_name <- paste0(files_to_extract$country[i],"_",files_to_extract$year_submission[i])
-#   
-#   data <- data_crts %>% filter(dir==files_to_extract$dir[i]) 
-#   data_memos <- data_crts_memos %>% filter(dir==files_to_extract$dir[i])
-#   
-#   save(data,data_memos,file=paste0("sources/compiled/",file_name,".RData"))
-#   
-# }
-
-
-
-
-## update file structure
-# load("sources/data_crt_files.RData")
-# 
-# 
-# 
-# files_crts <- rbind(files_crts,new_crt_files %>%
-#                       mutate(status_summaries="compiled"))
-
-
-
 
 
 ```

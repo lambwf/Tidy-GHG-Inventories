@@ -255,14 +255,20 @@ for (i in 1:length(folders$dir)) {
 
 new_crt_files <- new_crt_files %>% 
   filter(!is.na(dir)) %>% 
-  mutate(iso=countrycode(country,"country.name","iso3c")) %>% 
-  mutate(country=countrycode(iso,"iso3c","country.name"))
+  mutate(iso=countrycode(country,"country.name","iso3c")) %>%
+  mutate(iso=ifelse(country=="EUU","EU27",iso)) %>% 
+  mutate(country=countrycode(iso,"iso3c","country.name")) %>% 
+  mutate(country=ifelse(iso=="EU27","European Union",country))
 
 
 ## check for issues
 
 check <- new_crt_files %>% 
   filter(is.na(country) | is.na(year_file) | is.na(year_submission))
+
+
+
+
 
 ```
 

@@ -24,7 +24,7 @@ load("sources/data_crt_files.RData")
 
 files <- files_crts %>% 
   filter(status_summaries=="compiled") %>% 
-  select(iso,country,dir,year_submission) %>% 
+  select(iso,country,dir,year_submission,status_energy) %>% 
   distinct()
 
 ## Get latest versions for each country
@@ -32,10 +32,11 @@ files <- files_crts %>%
 files <- files %>% 
   group_by(iso,country) %>% 
   summarise(year_submission=last(year_submission)) %>% 
-  mutate(file=paste0(country,"_",year_submission))
+  mutate(file=paste0(country,"_",year_submission)) %>% 
+  left_join(.,files_crts %>% select(iso,country,year_submission,status_energy) %>% distinct(),by = join_by(iso, country, year_submission))
 
 
-## Compile
+## Compile summaries
 
 data <- data.frame()
 data_memos <- data.frame()
@@ -48,6 +49,22 @@ for (i in 1:length(files$file)) {
   data <- rbind(data,temp_env$data)
   data_memos <- rbind(data_memos,temp_env$data_memos)
   
+}
+
+
+## Compile more detailed energy data
+
+data_energy <- data.frame()
+
+for (i in 1:length(files$file)) {
+  if (files$status_energy[i]=="compiled") {
+  
+    temp_env <- new.env()
+    load(paste0("sources/compiled/",files$file[i],".RData"), envir = temp_env)
+    
+    data_energy <- rbind(data_energy,temp_env$data_energy)
+    
+  }
 }
 
 
@@ -77,8 +94,8 @@ data_eu <- data_eu %>%
 
 
 data_eu <- data_eu %>%  
-  #filter(year!=2023) %>% 
-  mutate(dir="Underlying national CRTs",year_submission="2024/2025")
+  filter(year!=2024) %>% 
+  mutate(dir="Underlying national CRTs",year_submission="2025/2026")
   
 data <- rbind(data,data_eu)
 
@@ -104,23 +121,75 @@ data_eu_memos <- data_eu_memos %>%
 
 
 data_eu_memos <- data_eu_memos %>%  
-#  filter(year!=2023) %>% 
+  filter(year!=2024) %>% 
   mutate(dir="Underlying national CRTs",year_submission="2024/2025")
   
 data_memos <- rbind(data_memos,data_eu_memos)
 
 
+## energy sheets
+
+data_eu_energy <- data_energy %>% 
+  left_join(.,read.csv("https://raw.githubusercontent.com/openclimatedata/countrygroups/main/data/european-union.csv") %>% 
+  select(iso=Code) %>% 
+  mutate(EU="EU27"),by=join_by(iso)) %>% 
+  filter(EU=="EU27")
+  
+check <- data_eu_energy %>% 
+  select(iso,country,year_submission) %>% 
+  distinct()
+
+data_eu_energy <- data_eu_energy %>% 
+  mutate(iso=EU) %>% 
+  mutate(country="European Union") %>% 
+  select(-EU,-dir,-year_submission) %>% 
+  group_by(across(!all_of("value"))) %>% 
+  summarise(value=sum(value,na.rm=TRUE)) 
+
+data_eu_energy <- data_eu_energy %>%  
+  filter(year!=2024) %>% 
+  mutate(dir="Underlying national CRTs",year_submission="2025/2026")
+  
+data_energy <- rbind(data_energy,data_eu_energy)
+
+``` 
+
+``` {r double_check}
+
+## double check that energy sheets sum to summaries and merge
+
+
+#clean fuels
+data_energy$fuel <- gsub("\\(7)","",data_energy$fuel)
+
+
+check <- data_energy %>% 
+  group_by(iso,year,sector_lv1) %>% 
+  summarise(value=sum(value,na.rm=T)) %>% 
+  left_join(.,data %>% group_by(iso,year,sector_lv1) %>% summarise(value=sum(value,na.rm=T)),by = join_by(iso, year, sector_lv1)) %>% 
+  mutate(diff=value.x-value.y) %>% 
+  filter(round(diff,5)!=0)
+
+
+data_detailed <- data %>% 
+  left_join(.,files %>% select(-file),by = join_by(country, iso, year_submission)) %>% 
+  mutate(remove=ifelse(status_energy=="compiled" & sector_lv1=="Energy",1,0)) %>% 
+  filter(remove==0) %>% select(-remove) %>% 
+  bind_rows(.,data_energy)
+
+
+## clean structure and arrange
+data_detailed <- data_detailed %>% 
+  select(country,iso,dir,year_submission,sector_code,sector_level,sector_lv1,sector_lv2,sector_lv3,sector_lv4,year,fuel,gas,units,value) %>% 
+  arrange(across(-c(value))) %>% 
+  filter(year>=1990)
+
+
 ``` 
 
 
-``` {r clean_memos}
 
-
-```
-
-
-
-``` {r save}
+``` {r save_summary_long}
 
 data_crts <- data
 save(data_crts,data_memos,file=paste0("data/data_crts_v",version,".RData"))
@@ -162,7 +231,7 @@ sector_summary <- read.xlsx("data/cc_inventory_sectors.xlsx",sheet=1)
 
 
 country_summary <- data_crts %>%
-  group_by(country,iso,file=dir,year) %>% 
+  group_by(country,iso,year) %>% 
   summarise(value=sum(value,na.rm=TRUE)/1e6) %>% 
   mutate(value=ifelse(value==0,NA,value)) %>% 
   spread(.,year,value)
@@ -201,7 +270,7 @@ saveWorkbook(wb_long,paste0("data/Tidy-GHG-Inventories-v",version,"-long.xlsx"),
 
 ```
 
-``` {r save}
+``` {r save_summary_wide}
 
 ############ wide version
 
@@ -301,6 +370,203 @@ saveWorkbook(wb_wide,paste0("data/Tidy-GHG-Inventories-v",version,"-wide.xlsx"),
 ```
 
 
+``` {r save_detailed_long}
+
+data_crts_detailed <- data_detailed
+save(data_crts_detailed,data_memos,file=paste0("data/data_crts_detailed_v",version,".RData"))
+
+wb_long_detailed <- createWorkbook()
+addWorksheet(wb_long_detailed,"info")
+addWorksheet(wb_long_detailed,"data")
+addWorksheet(wb_long_detailed,"memos")
+addWorksheet(wb_long_detailed,"sectors")
+addWorksheet(wb_long_detailed,"countries")
+
+info = data.frame(a=c("Title",
+                      "Author",
+                      "Contact",
+                      "General description",
+                      "Sector description",
+                      "Fuels",
+                      "Memos",
+                      "Global warming potentials",
+                      "Country coverage",
+                      "Last update",
+                      "Link to code",
+                      "Citation"),
+                  b=c(paste0("Tidy GHG Inventories v",version),
+                      "William F. Lamb",
+                      "william.lamb@pik-potsdam.de",
+                      "This data file is a compilation of national greenhouse gas emissions (GHG) inventories, sourced from the Common Reporting Tables (CRTs) that countries submit to the UNFCCC. The CRTs themselves require significant manipulation before one can begin any data analysis. The objective of this dataset is therefore to put the national inventories into a tidy, consistent format that better suits user needs. I sourced the original CRT files from the UNFCCC (e.g. https://unfccc.int/ghg-inventories-annex-i-parties/2026; https://unfccc.int/first-biennial-transparency-reports) and reformatted their summary reports into a single tidy, structured data table.",
+                      "Emissions are split into sectors as set out by the Intergovernmental Panel on Climate Change (IPCC) Task Force on National Greenhouse Gas Inventories (TFI). The six main sectors are (1) Energy, (2) Industrial processes and product use, (3) Agriculture, (4) Land use, land-use change and forestry, (5) Waste, and (6) Other. A general description of the sectors is available in the TFI guidance. In this data file, where data was available, the energy sector is expressed down to the fourth level of the hierarchy and fuels from sector 1.A. are included. In other sectors, the most detailed level of reporting provided in the CRT summary sheets is included (mainly down to the third level of the hierarchy). I have included only the data from 'leaf nodes' in the sector hierarchy, which are sectors that have no further child sectors. This means that you can safely sum up all sectors for each country without double counting. The higher level sector categories are provided as variables for convenient aggregation. The 'sector' tab of the spreadsheet shows which sectors are included and how they fit into the TFI hierarchy.",
+                      "The fuels in sector 1.A. are included as they are described in the inventories. Note that all biomass CO2 emissions have been set to 0, as they are conventionally not included in CO2 totals due to being 'carbon neutral'. In some countries the underlying energy sheets do not sum to totals indicated in the summaries (e.g. in Sweden due to confidential data). In these cases I added a 'residual' value to the fuel column so that totals remain consistent.",
+                      "Countries report certain memo items in their inventories, but do not account these in the totals. Currently they include items like international bunker fuels, military operations and CO2 storage. These can be found in the separate Memo tab. Note that the full hierarchy is included here, so double counting is possible.",
+                      "Countries report emissions from CO2, CH4, N2O and F-gases (HFCs, PFCs, NF3, SF6). I have converted emissions from the different gases to CO2 equivalents using global warming potentials with a 100 year time horizon from the IPCC 5th Assessment Report (GWP100 AR5). More recent GWP100 values have been published in the IPCC AR6, but I have not yet figured out if it is possible to extract F-gases from every CRT in original units, which would be necessary to update the values. CH4 and N2O can be reconverted into their original units by dividing by 28 and 265, respectively.",
+                      "Currently only Annex I countries consistently submit CRTs each year. Non-Annex I countries submit at irregular intervals, although this may change. Recently there have also been significant delays in submissions as as countries move to the new reporting format. The full list of countries covered and associated files is in the 'countries' tab of the spreadsheet.",
+                      paste0(Sys.Date()),
+                      "https://github.com/lambwf/Tidy-GHG-Inventories/blob/main/read_crts.Rmd",
+                      paste0("Lamb, W. F. (",format(Sys.time(),"%Y"),"). Tidy GHG Inventories (v",version,") [Data set]. Zenodo. https://doi.org/10.5281/zenodo.17192657")))
+
+
+## rebuild sector hierarchy
+
+sector_summary <- read.xlsx("data/cc_inventory_sectors.xlsx",sheet=2) %>% select(-sector_tidy,-sector_tidy_order)
+
+country_summary <- data_crts_detailed %>%
+  group_by(country,iso,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1e6) %>% 
+  mutate(value=ifelse(value==0,NA,value)) %>% 
+  spread(.,year,value)
+
+
+writeData(wb_long_detailed, sheet = "info", info, colNames = F, rowNames = F)
+writeData(wb_long_detailed, sheet = "data", data_crts_detailed %>% select(-dir,-year_submission), colNames = T, rowNames = F)
+writeData(wb_long_detailed, sheet = "memos", data_memos %>% select(-dir,-year_submission), colNames = T, rowNames = F)
+writeData(wb_long_detailed, sheet = "sectors", sector_summary, colNames = T, rowNames = F)
+writeData(wb_long_detailed, sheet = "countries", country_summary, colNames = T, rowNames = F)
+
+textStyle <- createStyle(fontSize = 11, wrapText = TRUE, valign = "top", halign = "left")
+addStyle(wb_long_detailed, "info", textStyle, rows = 1:nrow(info), cols = 1:2, gridExpand = TRUE)
+addStyle(wb_long_detailed, "data",createStyle(numFmt= "0"),rows=1:nrow(data_crts_detailed),cols=which(names(data_crts_detailed)=="year"))
+addStyle(wb_long_detailed, "memos",createStyle(numFmt= "0"),rows=1:nrow(data_memos),cols=which(names(data_memos)=="year"))
+addStyle(wb_long_detailed, "countries", createStyle(numFmt= "0"), cols = 1:ncol(country_summary), rows = 2:(nrow(country_summary) + 1), gridExpand = TRUE)
+addStyle(wb_long_detailed, "sectors", createStyle(textDecoration = "bold"), rows = which(is.na(sector_summary$is_leaf) | sector_summary$sector_level==1) +1,
+         cols=which(names(sector_summary)=="sector_description"), gridExpand = TRUE)
+
+
+setColWidths(wb_long_detailed, "info", cols = 1, widths = 20)
+setColWidths(wb_long_detailed, "info", cols = 2, widths = 200)
+setColWidths(wb_long_detailed, "data", cols = 1:ncol(data_crts_detailed), widths = "auto")
+setColWidths(wb_long_detailed, "data", cols=which(names(data_crts_detailed)=="iso"), widths = 5)
+setColWidths(wb_long_detailed, "data", cols=which(names(data_crts_detailed)=="year"), widths = 8)
+setColWidths(wb_long_detailed, "memos", cols = 1:ncol(data_memos), widths = "auto")
+setColWidths(wb_long_detailed, "memos", cols=which(names(data_memos)=="iso"), widths = 5)
+setColWidths(wb_long_detailed, "memos", cols=which(names(data_memos)=="year"), widths = 8)
+setColWidths(wb_long_detailed, "sectors", cols = 1:ncol(sector_summary), widths = "auto")
+setColWidths(wb_long_detailed, "countries", cols = 1:ncol(country_summary), widths = "auto")
+setColWidths(wb_long_detailed, "countries", cols=which(names(country_summary)=="iso"), widths = 5)
+setColWidths(wb_long_detailed, "countries", cols=which(names(country_summary)=="units"), widths = 21)
+
+saveWorkbook(wb_long_detailed,paste0("data/Tidy-GHG-Inventories-v",version,"-detailed-long.xlsx"),overwrite=T)
+
+
+```
+
+``` {r save_detailed_wide}
+
+############ wide version
+
+wb_wide_detailed <- createWorkbook()
+addWorksheet(wb_wide_detailed,"info")
+addWorksheet(wb_wide_detailed,"data")
+addWorksheet(wb_wide_detailed,"memos")
+addWorksheet(wb_wide_detailed,"countries")
+
+info = data.frame(a=c("Title",
+                      "Author",
+                      "Contact",
+                      "General description",
+                      "Sector description",
+                      "Fuels",
+                      "Memos",
+                      "Global warming potentials",
+                      "Country coverage",
+                      "Last update",
+                      "Link to code",
+                      "Citation"),
+                  b=c(paste0("Tidy GHG Inventories v",version),
+                      "William F. Lamb",
+                      "william.lamb@pik-potsdam.de",
+                      "This data file is a compilation of national greenhouse gas emissions (GHG) inventories, sourced from the Common Reporting Tables (CRTs) that countries submit to the UNFCCC. The CRTs themselves require significant manipulation before one can begin any data analysis. The objective of this dataset is therefore to put the national inventories into a tidy, consistent format that better suits user needs. I sourced the original CRT files from the UNFCCC (e.g. https://unfccc.int/ghg-inventories-annex-i-parties/2026; https://unfccc.int/first-biennial-transparency-reports) and reformatted their summary reports into a single tidy, structured data table.",
+                      "Emissions are split into sectors as set out by the Intergovernmental Panel on Climate Change (IPCC) Task Force on National Greenhouse Gas Inventories (TFI). The six main sectors are (1) Energy, (2) Industrial processes and product use, (3) Agriculture, (4) Land use, land-use change and forestry, (5) Waste, and (6) Other. A general description of the sectors is available in the TFI guidance. In this data file, where data was available, the energy sector is expressed down to the fourth level of the hierarchy and fuels from sector 1.A. are included. In other sectors, the most detailed level of reporting provided in the CRT summary sheets is included (mainly down to the third level of the hierarchy). I have included only the data from 'leaf nodes' in the sector hierarchy, which are sectors that have no further child sectors. This means that you can safely sum up all sectors for each country without double counting. The higher level sector categories are provided as variables for convenient aggregation. The 'sector' tab of the spreadsheet shows which sectors are included and how they fit into the TFI hierarchy.",
+                      "The fuels in sector 1.A. are included as they are described in the inventories. Note that all biomass CO2 emissions have been set to 0, as they are conventionally not included in CO2 totals due to being 'carbon neutral'. In some countries the underlying energy sheets do not sum to totals indicated in the summaries (e.g. in Sweden due to confidential data). In these cases I added a 'residual' value to the fuel column so that totals remain consistent.",
+                      "Countries report certain memo items in their inventories, but do not account these in the totals. Currently they include items like international bunker fuels, military operations and CO2 storage. These can be found in the separate Memo tab. Note that the full hierarchy is included here, so double counting is possible.",
+                      "Countries report emissions from CO2, CH4, N2O and F-gases (HFCs, PFCs, NF3, SF6). I have converted emissions from the different gases to CO2 equivalents using global warming potentials with a 100 year time horizon from the IPCC 5th Assessment Report (GWP100 AR5). More recent GWP100 values have been published in the IPCC AR6, but I have not yet figured out if it is possible to extract F-gases from every CRT in original units, which would be necessary to update the values. CH4 and N2O can be reconverted into their original units by dividing by 28 and 265, respectively.",
+                      "Currently only Annex I countries consistently submit CRTs each year. Non-Annex I countries submit at irregular intervals, although this may change. Recently there have also been significant delays in submissions as as countries move to the new reporting format. The full list of countries covered and associated files is in the 'countries' tab of the spreadsheet.",
+                      paste0(Sys.Date()),
+                      "https://github.com/lambwf/Tidy-GHG-Inventories/blob/main/read_crts.Rmd",
+                      paste0("Lamb, W. F. (",format(Sys.time(),"%Y"),"). Tidy GHG Inventories (v",version,") [Data set]. Zenodo. https://doi.org/10.5281/zenodo.17192657")))
+
+
+
+sector_summary <- read.xlsx("data/cc_inventory_sectors.xlsx",sheet=2) %>% select(-sector_tidy,-sector_tidy_order) %>% rename(sector_description=sector)
+sector_summary <- sector_summary %>% 
+  mutate(sector_lv2=ifelse(sector_lv2=="Fuel combustion activities","Fuel combustion",sector_lv2))
+
+sector_summary <- sector_summary %>% 
+  filter(str_starts(sector_code, "1")) %>% 
+  filter(!str_starts(sector_code, "1.C.")) %>% 
+  filter(!str_starts(sector_code, "1.D.")) %>% 
+  bind_rows(.,read.xlsx("data/cc_inventory_sectors.xlsx",sheet=1) %>% filter(!str_starts(sector_code, "1")))
+
+
+data_crts_wide_detailed <- data.frame()
+
+countries <- data_detailed %>% select(iso,country) %>% distinct()
+
+for (i in 1:length(countries$iso)) {
+  
+  temp <- left_join(sector_summary,data_detailed %>% 
+                     filter(iso==countries$iso[i]) %>% 
+                     spread(.,year,value) %>% 
+                      select(-sector_lv1,-sector_lv2,-sector_lv3,-sector_lv4),
+                    by = join_by(sector_code, sector_level))
+  
+  
+  temp <- temp %>% 
+    mutate(iso=countries$iso[i]) %>% 
+    mutate(country=countries$country[i])
+  
+  data_crts_wide_detailed <- bind_rows(temp,data_crts_wide_detailed)
+  
+}
+
+data_crts_wide_detailed <- data_crts_wide_detailed %>% 
+  mutate(sector_code=as.factor(sector_code)) %>% 
+  mutate(sector_code=fct_inorder(sector_code)) %>%
+  select(-is_leaf,-dir,-year_submission) %>%
+  select(country,iso,everything()) %>% 
+  select(country:units,
+         sort(select(., starts_with("20") | starts_with("19")) %>% names())) %>% 
+  arrange(country,iso,sector_code)
+
+
+country_summary <- data_crts_wide_detailed %>% 
+  gather(year,value,`1990`:`2024`) %>% 
+  group_by(country,iso,year) %>% 
+  summarise(value=sum(value,na.rm=TRUE)/1e6) %>% 
+  mutate(value=ifelse(value==0,NA,value)) %>% 
+  spread(.,year,value)
+
+
+writeData(wb_wide_detailed, sheet = "info", info, colNames = F, rowNames = F)
+writeData(wb_wide_detailed, sheet = "data", data_crts_wide_detailed, colNames = T, rowNames = F)
+writeData(wb_wide_detailed, sheet = "memos", data_memos %>% select(-dir,-year_submission) %>% spread(.,year,value), colNames = T, rowNames = F)
+writeData(wb_wide_detailed, sheet = "countries", country_summary, colNames = T, rowNames = F)
+
+textStyle <- createStyle(fontSize = 11, wrapText = TRUE, valign = "top", halign = "left")
+addStyle(wb_wide_detailed, "info", textStyle, rows = 1:nrow(info), cols = 1:2, gridExpand = TRUE)
+addStyle(wb_wide_detailed, "data",createStyle(numFmt= "0"),rows=1:nrow(data_crts_wide_detailed),cols=which(names(data_crts_wide_detailed)=="year"))
+addStyle(wb_wide_detailed, "memos",createStyle(numFmt= "0"),rows=1:nrow(data_memos),cols=which(names(data_memos)=="year"))
+addStyle(wb_wide_detailed, "countries", createStyle(numFmt= "0"), cols = 1:ncol(country_summary), rows = 2:(nrow(country_summary) + 1), gridExpand = TRUE)
+addStyle(wb_wide_detailed, "data", createStyle(textDecoration = "bold"), rows = which(is.na(data_crts_wide_detailed$sector_lv1)) +1,
+         cols=which(names(data_crts_wide_detailed)=="sector_description"), gridExpand = TRUE)
+
+
+setColWidths(wb_wide_detailed, "info", cols = 1, widths = 20)
+setColWidths(wb_wide_detailed, "info", cols = 2, widths = 200)
+setColWidths(wb_wide_detailed, "data", cols = 1:ncol(data_crts_wide_detailed), widths = "auto")
+setColWidths(wb_wide_detailed, "data", cols=which(names(data_crts_wide_detailed)=="iso"), widths = 5)
+setColWidths(wb_wide_detailed, "memos", cols = 1:ncol(data_memos), widths = "auto")
+setColWidths(wb_wide_detailed, "memos", cols=which(names(data_memos)=="iso"), widths = 5)
+setColWidths(wb_wide_detailed, "countries", cols = 1:ncol(country_summary), widths = "auto")
+setColWidths(wb_wide_detailed, "countries", cols=which(names(country_summary)=="iso"), widths = 5)
+setColWidths(wb_wide_detailed, "countries", cols=which(names(country_summary)=="units"), widths = 21)
+
+saveWorkbook(wb_wide_detailed,paste0("data/Tidy-GHG-Inventories-v",version,"-detailed-wide.xlsx"),overwrite=T)
+
+
+```
 
 
 ``` {r compare_versions}

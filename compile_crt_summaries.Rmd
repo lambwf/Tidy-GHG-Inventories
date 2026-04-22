@@ -20,6 +20,8 @@ library(tools)
 load("sources/data_crt_files.RData")
 new_crt_files <- files_crts %>% filter(status_summaries=="notcompiled")
 
+new_crt_files <- files_crts %>% filter(iso=="EU27")
+
 ```
 
 
@@ -450,25 +452,25 @@ data_memos <- data_memos %>% arrange(across(-ncol(data_memos)))
 
 #################### TO DO !!!!!!!
 
-
-
+# 
+# 
 # load("sources/data_crt_files.RData")
 # 
-# files <- data_crts %>% 
-#   select(iso,country,dir) %>% 
-#   distinct() %>% 
+# files <- data_crts %>%
+#   select(iso,country,dir) %>%
+#   distinct() %>%
 #   mutate(keep=1)
 # 
-# files_crts <- files_crts %>% 
-#   left_join(.,files,by = join_by(dir, country, iso)) %>% 
+# files_crts <- files_crts %>%
+#   left_join(.,files,by = join_by(dir, country, iso)) %>%
 #   filter(keep==1)
 # 
 # 
 # 
 # files_crts <- files_crts %>%
-#   arrange(iso,year_file) %>% 
-#   group_by(iso,dir) %>% 
-#   mutate(include=ifelse(year_file==last(year_file),1,0)) %>% 
+#   arrange(iso,year_file) %>%
+#   group_by(iso,dir) %>%
+#   mutate(include=ifelse(year_file==last(year_file),1,0)) %>%
 #   filter(include==1)
 # 
 # 
@@ -478,52 +480,52 @@ data_memos <- data_memos %>% arrange(across(-ncol(data_memos)))
 # data_crts_totals <- data.frame()
 # 
 # for (i in 1:length(files_crts$country)) {
-#   
+# 
 #   totals <- read.xlsx(xlsxFile = paste0("sources/done/",files_crts$dir[i],"/",files_crts$files[i]),
 #                        sheet = paste0("Table10s1"),
 #                        startRow = 8) %>%
-#     select(var="GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",matches("^\\d{4}")) %>% 
-#     rename_with(~ substr(., 1, 4), matches("^\\d{4}")) %>% 
-#     mutate(units = "ktCO2e") %>% 
+#     select(var="GREENHOUSE.GAS.SOURCE.AND.SINK.CATEGORIES",matches("^\\d{4}")) %>%
+#     rename_with(~ substr(., 1, 4), matches("^\\d{4}")) %>%
+#     mutate(units = "ktCO2e") %>%
 #     mutate(gas = "ghg")
-#   
-#   
-#   totals <- totals %>% 
-#     filter(grepl("Total",var)) %>% 
-#     filter(grepl("net emissions",var)) %>% 
-#     gather(.,year,total,-var,-units,-gas) %>% 
+# 
+# 
+#   totals <- totals %>%
+#     filter(grepl("Total",var)) %>%
+#     filter(grepl("net emissions",var)) %>%
+#     gather(.,year,total,-var,-units,-gas) %>%
 #     mutate(iso=files_crts$iso[i]) %>%
-#     mutate(year=as.numeric(year)) %>% 
-#     mutate(total=as.numeric(total)*1000) %>% 
+#     mutate(year=as.numeric(year)) %>%
+#     mutate(total=as.numeric(total)*1000) %>%
 #     select(iso,year,total)
-#   
+# 
 #   data_crts_totals <- bind_rows(data_crts_totals,totals)
-#     
-#   
+# 
+# 
 # }
-#   
+# 
 # 
 # # do my leaf node emissions sum up to totals in the CRT summaries?
 # 
-# check <- data_crts %>% 
-#   group_by(iso,country,year) %>% 
+# check <- data_crts %>%
+#   group_by(iso,country,year) %>%
 #   summarise(value=sum(value,na.rm=TRUE))
 # 
 # check <- left_join(check,data_crts_totals,by=join_by(iso,year))
 # 
-# check <- check %>% 
-#   mutate(difference_abs=value-total) %>% 
-#   mutate(difference_rel=(difference_abs/value)*100) %>% 
+# check <- check %>%
+#   mutate(difference_abs=value-total) %>%
+#   mutate(difference_rel=(difference_abs/value)*100) %>%
 #   filter(abs(difference_rel)>0.01)
-#   
 # 
 # 
-# blarg <- data_crts %>% 
-#   filter(iso=="EU27" & year==2023) %>% 
-#   group_by(year,sector_lv1) %>% 
+# 
+# blarg <- data_crts %>%
+#   filter(iso=="EU27" & year==2023) %>%
+#   group_by(year,sector_lv1) %>%
 #   summarise(value=sum(value,na.rm=T)/1000)
 # 
-# 
+
 
 ```
 
