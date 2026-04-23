@@ -208,13 +208,13 @@ for (file in filenames) {
   country <- sub(".*/(.*)\\-sectors.svg", "\\1", file)
   plot <- sub(".*/(.*)\\-sectors.png", "\\1", file)
   
-  link_data <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".xlsx'>data</a>")
+  link_data <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, "-sectors.xlsx'>data</a>")
   
-  link_png <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".png'>png</a>")
+  link_png <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, "-sectors.png'>png</a>")
   
-  link_pdf <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".pdf'>pdf</a>")
+  link_pdf <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, "-sectors.pdf'>pdf</a>")
   
-  link_svg <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, ".svg'>svg</a>")
+  link_svg <- paste0("<a target='_blank' href='https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/", country, "-sectors.svg'>svg</a>")
   
   # --- Read and embed SVG inline ---
   svg_content <- readLines(file, warn = FALSE)
