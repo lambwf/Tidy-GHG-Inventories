@@ -20,7 +20,6 @@ library(tools)
 load("sources/data_crt_files.RData")
 new_crt_files <- files_crts %>% filter(status_summaries=="notcompiled")
 
-new_crt_files <- files_crts %>% filter(iso=="EU27")
 
 ```
 

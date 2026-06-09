@@ -234,11 +234,23 @@ for (i in 1:length(new_crt_files$dir)) {
 
 ```
 
+``` {r manual_fixes}
+
+#### manual fixes
+data_crt <- data_crt %>% 
+  filter(!(iso=="IND" & sector_lv4=="Railways" & fuel=="High-speed diesel oil(HSDO)")) %>% 
+  filter(!(iso=="IND" & sector_lv4=="Railways" & fuel==" kerosene"))
+
+
+```
+
+
 ``` {r clean}
 
 data_crts_energy <- data_crt %>% 
   ungroup() %>% 
   distinct()
+
 
 ## flag duplicate rows 
 ## sometimes these are simply subsectors that have been allocated 50% each of some category - thats ok
@@ -428,11 +440,9 @@ files_crts <- files_crts %>%
   mutate(notes_energy=ifelse(iso=="SLB" & year_submission=="2025","Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
   mutate(notes_energy=ifelse(iso=="KOR" & year_submission=="2024","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
   mutate(notes_energy=ifelse(iso=="CHE" & year_submission=="2026","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy))  %>% 
-  mutate(notes_energy=ifelse(iso=="LUX" & year_submission=="2026","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) 
+  mutate(notes_energy=ifelse(iso=="LUX" & year_submission=="2026","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) %>% 
+  mutate(notes_energy=ifelse(iso=="IND" & year_submission=="2026","Trivial differences ignored; Residual added to energy sheets (difference between summary and underlying sheets, reason unknown)",notes_energy)) 
   
-
-
-####
 
 
 ```

@@ -236,6 +236,7 @@ for (i in 1:length(folders$dir)) {
     files$year_submission[j] <- str_extract(file_info$X2[2], "\\d{4}")
     files$country[j] <- file_info$X2[3]
     
+    
     ## The following lines capture cases where file information was put into an ajoined column (e.g. ISR)
     
     if (is.na(files$year_file[j]) &  length(names(file_info))>2 ) {

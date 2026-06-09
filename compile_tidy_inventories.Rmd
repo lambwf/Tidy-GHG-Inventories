@@ -13,7 +13,7 @@ library(tidyverse)
 library(countrycode)
 library(zoo)
 
-version = "2.0"
+version = "2.1"
 ```
 
 
@@ -94,8 +94,8 @@ data_eu <- data_eu %>%
 
 
 data_eu <- data_eu %>%  
-  filter(year!=2024) %>% 
-  mutate(dir="Underlying national CRTs",year_submission="2025/2026")
+  #filter(year!=2024) %>% 
+  mutate(dir="Underlying national CRTs",year_submission="2026")
   
 data <- rbind(data,data_eu)
 
@@ -121,8 +121,8 @@ data_eu_memos <- data_eu_memos %>%
 
 
 data_eu_memos <- data_eu_memos %>%  
-  filter(year!=2024) %>% 
-  mutate(dir="Underlying national CRTs",year_submission="2024/2025")
+  #filter(year!=2024) %>% 
+  mutate(dir="Underlying national CRTs",year_submission="2026")
   
 data_memos <- rbind(data_memos,data_eu_memos)
 
@@ -147,10 +147,28 @@ data_eu_energy <- data_eu_energy %>%
   summarise(value=sum(value,na.rm=TRUE)) 
 
 data_eu_energy <- data_eu_energy %>%  
-  filter(year!=2024) %>% 
-  mutate(dir="Underlying national CRTs",year_submission="2025/2026")
+  #filter(year!=2024) %>% 
+  mutate(dir="Underlying national CRTs",year_submission="2026")
   
 data_energy <- rbind(data_energy,data_eu_energy)
+
+
+## save EU
+tmp <- list2env(list(
+  data        = data_eu,
+  data_memos  = data_eu_memos,
+  data_energy = data_eu_energy
+))
+
+save(
+  list = c("data", "data_memos", "data_energy"),
+  file = "sources/compiled/European Union_2026.RData",
+  envir = tmp
+)
+
+rm(tmp)
+
+
 
 ``` 
 
@@ -571,7 +589,7 @@ saveWorkbook(wb_wide_detailed,paste0("data/Tidy-GHG-Inventories-v",version,"-det
 
 ``` {r compare_versions}
 
-current_version <- read.xlsx("data/Tidy-GHG-Inventories-v2.0-long.xlsx",sheet=2)
+current_version <- read.xlsx("data/Tidy-GHG-Inventories-v2.1-long.xlsx",sheet=2)
 last_version <- read.xlsx("data/Tidy-GHG-Inventories-v1.3-long.xlsx",sheet=2)
 
 compare <- current_version %>% 

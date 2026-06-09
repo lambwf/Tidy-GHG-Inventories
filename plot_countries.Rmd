@@ -90,7 +90,7 @@ for (i in 1:length(countries)) {
   info = data.frame(a=c("Author","Contact","Data sources"),
                     b=c("William F. Lamb",
                         "william.lamb@pik-potsdam.de",
-                        "Lamb, W. F. (2026). Tidy GHG Inventories (v2) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14512139"))
+                        "Lamb, W. F. (2026). Tidy GHG Inventories (v2.1) [Data set]. Zenodo. https://doi.org/10.5281/zenodo.14512139"))
   
   writeData(wb, sheet = "info",info,colNames = F, rowNames = F)
   writeData(wb, sheet = "data",data,colNames = T, rowNames = F)
@@ -203,7 +203,10 @@ countries <- files_crts %>%
   group_by(iso,country) %>% 
   summarise(year_submission=last(year_submission)) %>% 
   arrange(iso)
-i=8
+countries <- countries %>% 
+  ungroup() %>% 
+  add_row(iso="EU27",country="European Union",year_submission="2026")
+i=99
 
 data_feedstocks <- data_feedstocks %>% 
   mutate(country=countrycode(iso,"iso3c","country.name")) %>% 
@@ -327,8 +330,8 @@ for (i in 1:length(countries$iso)) {
   
   p1 <- ggplot(data_plot_fuel_sector,aes(axis1 = fuel,axis2 = sector_tidy,y = value)) +
     scale_x_discrete(expand = c(.1, .1)) +
-    geom_alluvium(aes(fill = fuel), width = 0.2, color="#525252",alpha=0.8) +
-    geom_stratum(width = 0.1, color = "black",fill="grey80") +
+    geom_alluvium(aes(fill = fuel), width = 0.2, color="#525252",alpha=0.8,linewidth=0.25) +
+    geom_stratum(width = 0.1, color = "black",fill="grey80",linewidth=0.25) +
     
     scale_x_discrete(expand=c(0,0)) +
     scale_y_continuous(expand=c(0,0)) +
@@ -348,8 +351,8 @@ for (i in 1:length(countries$iso)) {
   
   p2 <- ggplot(data_plot_sector_gas,aes(axis1 = sector_tidy,axis2 = gas,y = value)) +
     scale_x_discrete(expand = c(.1, .1)) +
-    geom_alluvium(aes(fill = gas), width = 0.2, color="#525252",alpha=0.8) +
-    geom_stratum(width = 0.1, color = "black",fill="grey80") +
+    geom_alluvium(aes(fill = gas), width = 0.2, color="#525252",alpha=0.8,linewidth=0.25) +
+    geom_stratum(width = 0.1, color = "black",fill="grey80",linewidth=0.25) +
     
     scale_x_discrete(expand=c(0,0)) +
     scale_y_continuous(expand=c(0,0)) +
@@ -572,7 +575,6 @@ length(country_list$coverage)
 ## Total complete CRTs
 length(country_list$iso[country_list$coverage=="Submitted,\ndata from 1990-2022"])
 
-## No. LDCs/SIDS with CRTs
 country_list <- country_list %>% 
   left_join(.,read.csv("https://raw.githubusercontent.com/openclimatedata/countrygroups/refs/heads/main/data/ldc.csv") %>% 
   select(iso=Code) %>% 
@@ -584,9 +586,21 @@ country_list <- country_list %>%
   mutate(SIDS=1))
 
 country_list <- country_list %>% 
+  left_join(.,read.csv("https://raw.githubusercontent.com/openclimatedata/countrygroups/refs/heads/main/data/annex-one.csv") %>% 
+  add_row(Code="EU27") %>% 
+  select(iso=Code) %>% 
+  mutate(AnnexI=1))
+
+country_list <- country_list %>% 
   mutate(LDCs_SIDS=ifelse(!is.na(LDC),1,NA)) %>% 
   mutate(LDCs_SIDS=ifelse(!is.na(SIDS),1,LDCs_SIDS))
 
+
+### No. non-AnnexI with "complete" CRTs
+length(country_list$iso[is.na(country_list$AnnexI) & country_list$n>=33])
+
+
+## No. LDCs/SIDS with CRTs
 length(country_list$iso[!is.na(country_list$LDCs_SIDS)])
 
 
