@@ -1,5 +1,4 @@
 site_name: "Tidy GHG Inventories"
-repo_url: https://github.com/lambwf/Tidy-GHG-Inventories/
 
 theme:
   name: material
@@ -15,6 +14,7 @@ nav:
   - Sectors: sectors.md
   - Fuels: fuels.md
   - Versions: versions.md
+  - William F. Lamb: https://lambwf.github.io/
   
   
 markdown_extensions:

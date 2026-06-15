@@ -281,8 +281,3 @@ out <- c(out, "\n</div>")
 
 writeLines(out, "docs/versions.md")
 
-
-
-
-
-

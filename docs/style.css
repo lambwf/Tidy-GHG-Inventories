@@ -34,3 +34,11 @@
 .figure-country {
     display: none;
 }
+
+.md-tabs__list {
+  display: flex;
+}
+
+.md-tabs__item:last-child {
+  margin-left: auto;
+}

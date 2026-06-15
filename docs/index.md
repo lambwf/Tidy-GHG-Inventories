@@ -11,6 +11,9 @@ The Tidy GHG Inventories dataset is a compilation of national greenhouse gas emi
 
 <a target='_blank' href='https://doi.org/10.5281/zenodo.14512139'>The data repository and documentation is available here.</a>
 
+<a target='_blank' href='https://github.com/lambwf/Tidy-GHG-Inventories/'>The github repository is here.</a>
+
+
 Not all countries submit complete or timely inventories. Some inventories include only a few years of data, or data in individual years instead of the full time series since 1990. The map below shows how complete the dataset currently is.
 
 ![](plots/map-coverage.svg)
