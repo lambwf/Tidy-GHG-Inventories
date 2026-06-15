@@ -61,7 +61,7 @@ for (file in files) {
   country <- sub(".*/(.*)-sectors\\.svg$", "\\1", file)
   country_id <- tolower(gsub("[^a-zA-Z0-9]+", "-", country))
   
-  link_base <- "https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sectors/"
+  link_base <- "https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/docs/plots/countries/sectors/"
   
   link_data <- paste0("<a target='_blank' href='", link_base, country, "-sectors.xlsx'>data</a>")
   link_png  <- paste0("<a target='_blank' href='", link_base, country, "-sectors.png'>png</a>")
@@ -157,7 +157,7 @@ for (file in files) {
   country <- sub(".*/(.*)-sankey\\.svg$", "\\1", file)
   country_id <- tolower(gsub("[^a-zA-Z0-9]+", "-", country))
   
-  link_base <- "https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/sankeys/"
+  link_base <- "https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/docs/plots/countries/sankeys/"
   
   link_data <- paste0("<a target='_blank' href='", link_base, country, "-sankey.xlsx'>data</a>")
   link_png  <- paste0("<a target='_blank' href='", link_base, country, "-sankey.png'>png</a>")
@@ -252,7 +252,7 @@ for (file in files) {
   country <- sub(".*/(.*)-versions\\.svg$", "\\1", file)
   country_id <- tolower(gsub("[^a-zA-Z0-9]+", "-", country))
   
-  link_base <- "https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/plots/countries/versions/"
+  link_base <- "https://raw.githubusercontent.com/lambwf/Tidy-GHG-Inventories/main/docs/plots/countries/versions/"
   
   link_data <- paste0("<a target='_blank' href='", link_base, country, "-versions.xlsx'>data</a>")
   link_png  <- paste0("<a target='_blank' href='", link_base, country, "-versions.png'>png</a>")
