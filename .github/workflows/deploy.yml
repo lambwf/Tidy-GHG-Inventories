@@ -22,7 +22,7 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install mkdocs-bootswatch mkdocs-table-reader-plugin openpyxl
+          pip install mkdocs-material
 
       - name: Deploy to GitHub Pages
         run: mkdocs gh-deploy --force
