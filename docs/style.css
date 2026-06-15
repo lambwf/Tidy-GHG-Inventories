@@ -1,0 +1,36 @@
+:root  > * {
+  --md-primary-fg-color: #008cba;
+  --md-footer-bg-color: #008cba;
+}
+
+.md-footer {
+  width: 100vw;
+  margin-left: calc(50% - 50vw);
+}
+
+
+.md-grid {
+  max-width: 1150px;
+}
+
+
+.md-container {
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+
+.md-typeset .grid.cards {
+    grid-template-columns: repeat(auto-fit, minmax(550px, 1fr));
+}
+
+
+.figure-links {
+    display: block;
+    text-align: center;
+    font-size: 14px;
+}
+
+.figure-country {
+    display: none;
+}

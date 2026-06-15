@@ -9,6 +9,7 @@ output:
 
 library(knitr)
 library(tidyverse)
+library(htmltools)
 knitr::opts_chunk$set(echo=FALSE)
 
 ```
@@ -16,141 +17,146 @@ knitr::opts_chunk$set(echo=FALSE)
 ``` {css}
 
 h1.title {
-  display: none;
+display: none;
 }
 
 .banner {
-  width: 100%;
-  height: 50px;
-  background-color: #008cba;
-  color: #f5f5f5;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 20px;
-  box-sizing: border-box;
-  position: fixed;
-  top: 0;
-  left: 0;
-  z-index: 1000;
+width: 100%;
+height: 50px;
+background-color: #008cba;
+color: #f5f5f5;
+display: flex;
+align-items: center;
+justify-content: space-between;
+padding: 0 20px;
+box-sizing: border-box;
+position: fixed;
+top: 0;
+left: 0;
+z-index: 1000;
 }
 
 .title {
-  font-size: 18px;
+font-size: 18px;
 }
 
 .banner a {
-  color: #f5f5f5;
-  text-decoration: none;
+color: #f5f5f5;
+text-decoration: none;
 }
 
 .banner a:hover {
-  text-decoration: underline;
+text-decoration: underline;
 }
 
 body {
-  font-family: Arial, sans-serif;
-  margin: 70px 20px 20px 20px;
-  background-color: #f9f9f9;
+font-family: Arial, sans-serif;
+margin: 70px 20px 20px 20px;
+background-color: #f9f9f9;
 }
 
 .figure-container {
-  width: 700px;
-  height: 350px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  text-align: center;
-  padding: 5px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-sizing: border-box;
-  background-color: white;
+width: 700px;
+height: 350px;
+margin: 0 auto;
+display: flex;
+flex-direction: column;
+align-items: center;
+text-align: center;
+padding: 5px;
+border: 1px solid #ddd;
+border-radius: 5px;
+box-sizing: border-box;
+background-color: white;
 }
 
 .figure-container img {
-  max-width: 100%;
-  height: auto;
-  max-height: 300px;
-  display: block;
-  margin: 0 auto 10px;
+max-width: 100%;
+height: auto;
+max-height: 300px;
+display: block;
+margin: 0 auto 10px;
 }
 
 .figure-container polyline {
-  fill: none;
+fill: none;
 }
 
 .figure-text {
-  font-size: 12px;
+font-size: 12px;
 }
 
 .grid {
-  display: grid;
-  justify-content:center;
-  align-items:center;
-  column-gap: 10px;
-  row-gap: 1em;
-  grid-template-columns: 1fr 1fr;
+display: grid;
+justify-content:center;
+align-items:center;
+column-gap: 10px;
+row-gap: 1em;
+grid-template-columns: 1fr 1fr;
 }
 
 .text-container {
-  margin: 0 auto;
-  padding: 15px;
-  border: 1px solid #ddd;
-  border-radius: 5px;
-  box-sizing: border-box;
-  background-color: white;
-  text-align: left;
-  font-size: 16px;
-  grid-column: span 2;
+margin: 0 auto;
+padding: 15px;
+border: 1px solid #ddd;
+border-radius: 5px;
+box-sizing: border-box;
+background-color: white;
+text-align: left;
+font-size: 16px;
+grid-column: span 2;
 }
 
 .text-container h1 {
-  font-size: 18px;
-  margin-top: 0px;
+font-size: 18px;
+margin-top: 0px;
 }
 
 
 @media (min-width: 1401px) {
-  .text-container {
-    width: 100%;
-  }
+.text-container {
+width: 100%;
+}
 }
 
 @media (max-width: 1400px) {
-  .grid {
-    grid-template-columns: 1fr;
-  }
-  .text-container {
-    grid-column: span 1;
-    max-width: 700px;
-  }
+.grid {
+grid-template-columns: 1fr;
+}
+.text-container {
+grid-column: span 1;
+max-width: 700px;
+}
 }
 
 @media (max-width: 700px) {
-  .figure-container {
-    width: 100%;
-    height: 100%;
-  }
+.figure-container {
+width: 100%;
+height: 100%;
+}
 }
 
 .copyright {
-  font-size: 12px;
-  text-align: center;
+font-size: 12px;
+text-align: center;
 }
 
-
 .headline-figure {
-  align-items: center;
+align-items: center;
 }
 
 .headline-figure img {
-  width: auto;
-  height: auto;
-  max-height: 400px;
-  display: left;
-  margin: 0 auto 10px;
+width: auto;
+height: auto;
+max-height: 400px;
+display: left;
+margin: 0 auto 10px;
+}
+
+.svg-container svg {
+width: 100%;
+height: auto;
+display: block;
 }
 
 
@@ -220,12 +226,22 @@ for (file in filenames) {
   svg_content <- readLines(file, warn = FALSE)
   svg_content <- paste(svg_content, collapse = "\n")
   
-  cat("<div class='figure-container'>")
-  cat(paste0("<img src='", file, "' alt='", plot, "' />"))
+  #cat("<div class='figure-container'>")
+  ##cat(paste0("<img src='", file, "' alt='", plot, "' />"))
+  #cat("<div class='svg-container'>")
   #cat(svg_content)
-  cat(paste0("<div class='figure-text'>", country, " | ", link_data, " | ", link_png, " | ", link_pdf, " | ", link_svg, "</div>"))
-  cat("</div>")
+  #cat("</div>")
+  #cat(paste0("<div class='figure-text'>", country, " | ", link_data, " | ", link_png, " | ", link_pdf, " | ", link_svg, "</div>"))
+  #cat("</div>")
   
+  div(
+    class = "figure-container",
+    HTML(svg_content),
+    div(
+      class = "figure-text",
+      HTML(paste(country, "|", link_data, "|", link_png, "|", link_pdf, "|", link_svg))
+    )
+  )
   
 }
 

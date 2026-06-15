@@ -432,40 +432,40 @@ for (i in 1:length(countries$iso)) {
   
   plot <- label_fuel + p1 + label_sector + p2 + label_gas + plot_layout(widths = c(0.34,1,0.75,1,0.35))
   plot
-  ggsave(plot,filename = paste0("plots/countries/sankeys/",countries$country[i],"-sankey.png"),device = "png",height = 5.5,width=10,dpi=300)
-  ggsave(plot,filename = paste0("plots/countries/sankeys/",countries$country[i],"-sankey.pdf"),device = cairo_pdf,height = 5.5,width=10)
-  ggsave(plot,filename = paste0("plots/countries/sankeys/",countries$country[i],"-sankey.svg"),device = 'svg',height = 5.5,width=10)
+  ggsave(plot,filename = paste0("docs/plots/countries/sankeys/",countries$country[i],"-sankey.png"),device = "png",height = 7,width=9,dpi=300)
+  ggsave(plot,filename = paste0("docs/plots/countries/sankeys/",countries$country[i],"-sankey.pdf"),device = cairo_pdf,height = 7,width=9)
+  ggsave(plot,filename = paste0("docs/plots/countries/sankeys/",countries$country[i],"-sankey.svg"),device = 'svg',height = 7,width=9)
 
 
 }
 
 
 
-
-data_fake <- read.xlsx("../IPCC AR7/sector_sankey.xlsx")
-data_fake$sector_inventory <- as.factor(data_fake$sector_inventory)
-data_fake$sector_inventory <- fct_reorder(data_fake$sector_inventory,data_fake$sector_inventory_order)
-data_fake$sector_ipcc <- as.factor(data_fake$sector_ipcc)
-data_fake$sector_ipcc <- fct_reorder(data_fake$sector_ipcc,data_fake$sector_ipcc_order)
-
-
-
-data_fake %>% 
-  ggplot(.,aes(axis1 = sector_inventory,axis2 = sector_ipcc,y = value)) +
-    scale_x_discrete(expand = c(.1, .1)) +
-    geom_alluvium(aes(fill = fuel), width = 0.2, color="#525252",alpha=0.8) +
-    geom_stratum(width = 0.1, color = "black",fill="grey80") +
-    
-    scale_x_discrete(expand=c(0,0)) +
-    scale_y_continuous(expand=c(0,0)) +
-    scale_fill_manual(values=colours_fuels,na.value = "grey80") +
-    theme_wl_empty() +
-    theme(
-      axis.title = element_blank(),
-      plot.margin = margin(5,0,5,5),
-      legend.position="none",
-      plot.caption = element_text(family = "sans",size = 9,hjust = 0,color = '#bdbdbd',margin = margin(t = 10))
-    ) 
+# 
+# data_fake <- read.xlsx("../IPCC AR7/sector_sankey.xlsx")
+# data_fake$sector_inventory <- as.factor(data_fake$sector_inventory)
+# data_fake$sector_inventory <- fct_reorder(data_fake$sector_inventory,data_fake$sector_inventory_order)
+# data_fake$sector_ipcc <- as.factor(data_fake$sector_ipcc)
+# data_fake$sector_ipcc <- fct_reorder(data_fake$sector_ipcc,data_fake$sector_ipcc_order)
+# 
+# 
+# 
+# data_fake %>% 
+#   ggplot(.,aes(axis1 = sector_inventory,axis2 = sector_ipcc,y = value)) +
+#     scale_x_discrete(expand = c(.1, .1)) +
+#     geom_alluvium(aes(fill = fuel), width = 0.2, color="#525252",alpha=0.8) +
+#     geom_stratum(width = 0.1, color = "black",fill="grey80") +
+#     
+#     scale_x_discrete(expand=c(0,0)) +
+#     scale_y_continuous(expand=c(0,0)) +
+#     scale_fill_manual(values=colours_fuels,na.value = "grey80") +
+#     theme_wl_empty() +
+#     theme(
+#       axis.title = element_blank(),
+#       plot.margin = margin(5,0,5,5),
+#       legend.position="none",
+#       plot.caption = element_text(family = "sans",size = 9,hjust = 0,color = '#bdbdbd',margin = margin(t = 10))
+#     ) 
 
 
 ```

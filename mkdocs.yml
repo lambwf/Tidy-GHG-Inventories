@@ -1,0 +1,31 @@
+site_name: "Tidy GHG Inventories"
+repo_url: https://github.com/lambwf/Tidy-GHG-Inventories/
+
+theme:
+  name: material
+  features:
+    - navigation.tracking
+    - navigation.tabs
+    - navigation.tabs.sticky
+  palette:
+    primary: custom
+  
+nav:
+  - Home: index.md
+  - Sectors: sectors.md
+  - Fuels: fuels.md
+  - Versions: versions.md
+  
+  
+markdown_extensions:
+  - attr_list
+  - md_in_html
+  
+extra_css:
+  - style.css
+  
+plugins: []
+
+copyright: © William F. Lamb
+extra:
+  generator: false
